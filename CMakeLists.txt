@@ -16,9 +16,9 @@ endif()
 set (CMAKE_CXX_FLAGS "-Wall -Wextra -fno-exceptions")
 
 
-add_executable(ecs main.cpp WorldRegistry.cpp)
+add_executable(ecs src/main.cpp src/WorldRegistry.cpp)
 target_link_libraries(ecs glfw GL)
-target_include_directories(ecs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(ecs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_custom_target(run
     COMMAND ecs
     DEPENDS ecs
@@ -26,8 +26,8 @@ add_custom_target(run
     COMMENT "Running... "
 )
 
-add_executable(testing testing.cpp)
-target_include_directories(ecs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable(testing src/testing.cpp)
+target_include_directories(ecs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_custom_target(test
     COMMAND testing
     DEPENDS testing

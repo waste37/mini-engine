@@ -149,6 +149,10 @@ namespace Testing {
         return true;
     }
 
+    bool WorldEntityCRUD() {
+
+    }
+
 
     void RunTest(const char *test_name, bool(*test)()) {
         std::cout << FG::Green << "running test: " << FG::Def << test_name << "... " << std::flush;
