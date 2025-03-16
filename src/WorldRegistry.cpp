@@ -97,11 +97,13 @@ void *WorldRegistry::GetComponentData(Entity e, u64 mask) {
     if (e.Version != info->Version) {
         return nullptr;
     }
-    usize offset = sizeof(Entity) * info->IndexInChunk;
+    usize offset = sizeof(Entity) * info->Chunk->EntityCapacity;
 
     u64 typemask = info->TypeInfo->TypeMask;
+    printf("typemask: 0x%x\n", typemask);
     for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
         if (m_RegisteredComponents.TypeMasks[i] & mask) {
+            offset += m_RegisteredComponents.Sizes[i] * info->IndexInChunk;
             // we have computed our offset..
             break;
         }
@@ -109,9 +111,11 @@ void *WorldRegistry::GetComponentData(Entity e, u64 mask) {
             continue;
         }
 
-        offset += m_RegisteredComponents.Sizes[i] * info->IndexInChunk;
+        offset += m_RegisteredComponents.Sizes[i] * info->Chunk->EntityCapacity;
+    printf("offset is %zu\n", offset);
     }
 
+    printf("offset is %zu\n", offset);
     return static_cast<u8*>(info->Chunk->Data) + offset;
     // find the offset of the requested component inside the entity chunk
     // return it
@@ -121,15 +125,15 @@ ChunkList *WorldRegistry::RegisterType(u64 typemask) {
     if (typemask == 0) {
         return nullptr;
     }
-    printf("asked to register %lx\n", typemask);
+    //printf("asked to register %lx\n", typemask);
     for (usize i = 0; i < m_Types.Size(); ++i) {
         if ((m_Types[i].TypeMask & typemask) == typemask) {
-            printf("type already registered\n");
+            //printf("type already registered\n");
             return &m_Types[i];
         }
     }
 
-    printf("creating type\n");
+    //printf("creating type\n");
     //let's create it
     m_Types.Resize(m_Types.Size()+1);
     ChunkList *result = &m_Types[m_Types.Size() - 1];
@@ -151,7 +155,7 @@ ChunkList *WorldRegistry::RegisterType(u64 typemask) {
 void WorldRegistry::DebugRegisteredComponents() const {
     printf("Currently registered components: \n");
     for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
-        printf("component %zu: mask = 0x%lx, size=%lld\n", 
+        printf("component %zu: mask = 0x%lx, size=%zu\n", 
                 i, m_RegisteredComponents.TypeMasks[i], m_RegisteredComponents.Sizes[i]);
     }
 }

@@ -12,6 +12,7 @@
 
 #include "Types.h"
 #include "Vector.h"
+#include "WorldRegistry.h"
 
 // a world has entities and components
 // the user implements systems
@@ -149,6 +150,14 @@ namespace Testing {
         return true;
     }
 
+struct Position {
+    f32 x, y;
+};
+
+struct Velocity {
+    f32 dx, dy;
+};
+
     bool WorldEntityCRUD() {
         WorldRegistry world{};
         world.Create();
@@ -173,6 +182,7 @@ namespace Testing {
         pos = (Position*)world.GetComponentData(e2, positionmask);
         if (pos->x != 20.0 || pos->y != 21.0) return false;
         world.Destroy();
+        return true;
     }
 
 
@@ -193,6 +203,7 @@ namespace Testing {
         RunTest("VectorPop", VectorPop);
         RunTest("VectorSize", VectorSize);
         RunTest("VectorResize", VectorResize);
+        RunTest("WorldEntityCRUD", WorldEntityCRUD);
         std::cout << "\nWorldRegistry tests:\n";
         std::cout << "All tests passed\n\n";
     }

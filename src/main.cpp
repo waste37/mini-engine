@@ -31,6 +31,10 @@ int main() {
     pos = (Position*)world.GetComponentData(e2, positionmask);
     printf("e2 pos: %f, %f\n", pos->x, pos->y);
 
+    world.DeleteEntity(e1);
+    pos = (Position*)world.GetComponentData(e2, positionmask);
+    printf("e2 pos: %f, %f\n", pos->x, pos->y);
+
     world.DebugRegisteredComponents();
     world.DebugRegisteredTypes();
     world.DebugRegisteredEntities();
