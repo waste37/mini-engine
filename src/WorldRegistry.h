@@ -59,7 +59,7 @@ struct ChunkList {
 };
 
 struct EntityInfo {
-    Chunk *Chunk;
+    struct Chunk *Chunk;
     ChunkList *TypeInfo;
     u32 IndexInChunk;
     u32 Version;

@@ -115,10 +115,11 @@ ChunkList *WorldRegistry::RegisterType(u64 typemask) {
         return nullptr;
     }
     for (usize i = 0; i < m_Types.Size(); ++i) {
-        if ((m_Types[i].TypeMask & typemask) == typemask) {
+        if (m_Types[i].TypeMask == typemask) {
             return &m_Types[i];
         }
     }
+    printf("creating new type\n");
     m_Types.Resize(m_Types.Size()+1);
     ChunkList *result = &m_Types[m_Types.Size() - 1];
     result->TypeMask = typemask;
@@ -130,7 +131,9 @@ ChunkList *WorldRegistry::RegisterType(u64 typemask) {
             type_size += m_RegisteredComponents.Sizes[i];
         }
     }
+
     result->Chunks[0].EntityCapacity = Chunk::CHUNK_SIZE / type_size;
+    printf("entity capacity is : %u\n", Chunk::CHUNK_SIZE / type_size);
     result->Chunks[0].Count = 0;
     return result;
 }
