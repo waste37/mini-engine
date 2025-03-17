@@ -26,8 +26,8 @@ add_custom_target(run
     COMMENT "Running... "
 )
 
-add_executable(testing src/testing.cpp)
-target_include_directories(ecs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_executable(testing src/testing.cpp src/WorldRegistry.cpp)
+target_include_directories(testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_custom_target(test
     COMMAND testing
     DEPENDS testing

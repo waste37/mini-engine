@@ -1,11 +1,21 @@
 #include <WorldRegistry.h>
 #include <iostream>
-struct Position {
+
+// Base class template using CRTP
+
+// Specializations inheriting from UniqueIDProvider
+
+struct Position : public IComponent<Position> {
     f32 x, y;
 };
 
-struct Velocity {
+struct Velocity : public IComponent<Velocity> {
     f32 dx, dy;
+};
+
+struct Health : public IComponent<Health>{
+    i32 health;
+    i32 armor;
 };
 
 int main() {
@@ -34,9 +44,18 @@ int main() {
     world.DeleteEntity(e1);
     pos = (Position*)world.GetComponentData(e2, positionmask);
     printf("e2 pos: %f, %f\n", pos->x, pos->y);
+    pos = (Position*)world.GetComponentData(e1, positionmask);
+    printf("e1 doesn't exist: %p\n", pos);
+    Entity e3 = world.CreateEntity(positionmask);
+    printf("e3 has id: %u\n", e3.Index);
 
     world.DebugRegisteredComponents();
     world.DebugRegisteredTypes();
     world.DebugRegisteredEntities();
     world.Destroy();
+
+    std::cout << Position::ID() << std::endl;
+    std::cout << Velocity::ID() << std::endl;
+    std::cout << Health::ID() << std::endl;
+    std::cout << Position::ID() << std::endl;
 }

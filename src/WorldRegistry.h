@@ -3,12 +3,21 @@
 #include "Types.h"
 #include "Vector.h"
 
+
 struct Entity {
     u32 Index;
     u32 Version;
 };
 
 constexpr Entity NULL_ENTITY = {0, 0};
+
+extern usize g_NextComponentID;
+template <typename D> struct IComponent {
+    static int ID() {
+        static int id = g_NextComponentID++;
+        return id;
+    }
+};
 
 struct ComponentMetadata {
     static constexpr i32 MAX_COMPONENTS = 63;
