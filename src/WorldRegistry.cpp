@@ -1,8 +1,7 @@
 #include <WorldRegistry.h>
 
 bool WorldRegistry::Create() {
-    m_RegisteredComponents.Sizes.Resize(1);
-    m_RegisteredComponents.Names.Resize(1);
+    RegisterComponent("Entity", 0, sizeof(Entity));
     m_Entities.Resize(1);
     return true;
 }
@@ -54,6 +53,7 @@ Entity WorldRegistry::CreateEntity(const Vector<u32> &component_ids) {
     } else {
         chunk = &type->Chunks[type->Chunks.Size()-1];
     }
+
     Entity *loc = static_cast<Entity*>(chunk->Data) + chunk->Count;
     *loc = e;
     m_Entities[e.Index].Chunk = chunk;
@@ -77,6 +77,22 @@ bool WorldRegistry::DeleteEntity(Entity e) {
     info->Version++;
 
     // swap last entity with the one that is being deleted
+    if (info->Chunk->Count > 1) {
+        usize last = info->Chunk->Count - 1;
+        usize cur = info->IndexInChunk;
+        usize offset = 0;
+        for (usize i = 0; i < info->TypeInfo->ComponentsIDs.Size(); ++i) {
+            u32 id = info->TypeInfo->ComponentsIDs[i];
+            usize size = m_RegisteredComponents.Sizes[id];
+            u8 *component_last = static_cast<u8*>(info->Chunk->Data) + offset + size * last;
+            u8 *component_cur = static_cast<u8*>(info->Chunk->Data) + offset + size * cur;
+            for (usize byte = 0; byte < size; ++byte) {
+                component_last[byte] = component_cur[byte];
+            }
+            offset += size * info->Chunk->EntityCapacity;
+        }
+    }
+
 
     info->Chunk->Count--;
 
@@ -96,28 +112,16 @@ void *WorldRegistry::GetComponentData(Entity e, u32 component_id) {
     if (e.Version != info->Version) {
         return nullptr;
     }
-    usize offset = sizeof(Entity) * info->Chunk->EntityCapacity;
+    usize offset = 0;
     for (usize i = 0; i < info->TypeInfo->ComponentsIDs.Size(); ++i) {
         u32 id = info->TypeInfo->ComponentsIDs[i];
-        usize comp_size = m_RegisteredComponents.Sizes[id];
+        usize size = m_RegisteredComponents.Sizes[id];
         if (id == component_id) {
-            offset += comp_size * info->IndexInChunk;
+            offset += size * info->IndexInChunk;
             break;
         }
-        offset += m_RegisteredComponents.Sizes[i] * info->Chunk->EntityCapacity;
+        offset += size * info->Chunk->EntityCapacity;
     }
-
-    // u64 typemask = info->TypeInfo->TypeMask;
-    // for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
-    //     if (m_RegisteredComponents.TypeMasks[i] & mask) {
-    //         offset += m_RegisteredComponents.Sizes[i] * info->IndexInChunk;
-    //         break;
-    //     }
-    //     if ((m_RegisteredComponents.TypeMasks[i] & typemask) == 0) {
-    //         continue;
-    //     }
-    //     offset += m_RegisteredComponents.Sizes[i] * info->Chunk->EntityCapacity;
-    // }
     return static_cast<u8*>(info->Chunk->Data) + offset;
 }
 
@@ -126,7 +130,17 @@ ChunkList *WorldRegistry::RegisterType(const Vector<u32> &component_ids) {
         return nullptr;
     }
     for (usize i = 0; i < m_Types.Size(); ++i) {
-        if (m_Types[i].ComponentsIDs == component_ids) {
+        if (m_Types[i].ComponentsIDs.Size() != component_ids.Size() + 1) {
+            continue;
+        }
+        bool equal = true;
+        for (usize j = 0; j < component_ids.Size(); ++j) {
+            if (m_Types[i].ComponentsIDs[j+1] != component_ids[j]) {
+                equal = false;
+                break;
+            }
+        }
+        if (equal) {
             return &m_Types[i];
         }
     }
@@ -135,21 +149,22 @@ ChunkList *WorldRegistry::RegisterType(const Vector<u32> &component_ids) {
     m_Types.Resize(m_Types.Size()+1);
 
     ChunkList *result = &m_Types[m_Types.Size() - 1];
-    result->ComponentsIDs.Resize(component_ids.Size());
+    result->ComponentsIDs.Resize(component_ids.Size() + 1);
+    result->ComponentsIDs[0] = 0;
     for (usize i = 0; i < component_ids.Size(); ++i) {
-        result->ComponentsIDs[i] = component_ids[i];
+        result->ComponentsIDs[i+1] = component_ids[i];
     }
+
     result->Chunks.Resize(1);
     result->Chunks[0].Data = new u8[Chunk::CHUNK_SIZE];
 
-    usize type_size = sizeof(Entity); // the 
+    usize type_size = 0; // the 
     for (usize i = 0; i < result->ComponentsIDs.Size(); ++i) {
         u32 id = result->ComponentsIDs[i];
         type_size += m_RegisteredComponents.Sizes[id];
     }
 
     result->Chunks[0].EntityCapacity = Chunk::CHUNK_SIZE / type_size;
-    printf("entity capacity is : %u\n", Chunk::CHUNK_SIZE / type_size);
     result->Chunks[0].Count = 0;
     return result;
 }

@@ -37,6 +37,9 @@ void bench() {
         v->dx = i + 10.0;
         v->dy = i + 11.0;
     }
+    for (u32 i = 1; i <= 1000; ++i) {
+        world->DeleteEntity({i, 0});
+    }
 
     for (usize i = 0; i < 1000; ++i) {
         Entity e = world->CreateEntity({1});
@@ -44,6 +47,9 @@ void bench() {
         pos->x = i + 20.0;
         pos->y = i + 21.0;
     }
+
+
+    // world->DebugRegisteredEntities();
     // world->DebugRegisteredComponents();
     // world->DebugRegisteredTypes();
 
