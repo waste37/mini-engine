@@ -60,28 +60,12 @@ public:
         ChunkListPushEntity(e);
         return e;
     }
+
     bool DeleteEntity(Entity e);
     template <typename T>
     T *GetComponentData(Entity e) {
         u32 component_id = T::ID();
-        if (e.Index >= m_Entities.Size()) {
-            return nullptr;
-        }
-        EntityInfo *info = &m_Entities[e.Index];
-        if (e.Version != info->Version) {
-            return nullptr;
-        }
-        usize offset = 0;
-        for (usize i = 0; i < info->TypeInfo->ComponentsIDs.Size(); ++i) {
-            u32 id = info->TypeInfo->ComponentsIDs[i];
-            usize size = m_RegisteredComponents.Sizes[id];
-            if (id == component_id) {
-                offset += size * info->IndexInChunk;
-                break;
-            }
-            offset += size * info->Chunk->EntityCapacity;
-        }
-        return (T*)((u8*)info->Chunk->Data + offset);
+        return (T*)GetComponentDataInternal(e, component_id);
     }
     void DebugRegisteredComponents() const;
     void DebugRegisteredTypes() const;
@@ -108,6 +92,7 @@ private:
     }
 
     ChunkList *RegisterTypeInternal(const Vector<u32> &component_ids);
+    void *GetComponentDataInternal(Entity e, u32 component_id);
     Entity NextEntity();
     void ChunkListPushEntity(Entity e);
 

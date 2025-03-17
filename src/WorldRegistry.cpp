@@ -45,13 +45,11 @@ bool WorldRegistry::DeleteEntity(Entity e) {
             for (usize byte = 0; byte < size; ++byte) {
                 component_cur[byte] = component_last[byte];
             }
-
             offset += size * info->Chunk->EntityCapacity;
         }
     }
 
     info->Chunk->Count--;
-
     ChunkList *type_info = m_Entities[e.Index].TypeInfo;
     if (type_info->Chunks.Size() > 1 && type_info->Chunks[type_info->Chunks.Size()-1].Count == 0) {
         Chunk c = type_info->Chunks.Pop();
@@ -73,6 +71,29 @@ Entity WorldRegistry::NextEntity() {
         e.Version = ++m_Entities[e.Index].Version;
     }
     return e;
+}
+
+void *WorldRegistry::GetComponentDataInternal(Entity e, u32 component_id) {
+    if (e.Index >= m_Entities.Size()) {
+        return nullptr;
+    }
+
+    EntityInfo *info = &m_Entities[e.Index];
+    if (e.Version != info->Version) {
+        return nullptr;
+    }
+
+    usize offset = 0;
+    for (usize i = 0; i < info->TypeInfo->ComponentsIDs.Size(); ++i) {
+        u32 id = info->TypeInfo->ComponentsIDs[i];
+        usize size = m_RegisteredComponents.Sizes[id];
+        if (id == component_id) {
+            offset += size * info->IndexInChunk;
+            break;
+        }
+        offset += size * info->Chunk->EntityCapacity;
+    }
+    return (u8*)info->Chunk->Data + offset;
 }
 
 ChunkList *WorldRegistry::RegisterTypeInternal(const Vector<u32> &component_ids) {
