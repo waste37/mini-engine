@@ -92,6 +92,16 @@ public:
         return m_Data[i];
     }
 
+    inline bool operator==(const Vector<T> &other) const {
+        if (m_Size != other.m_Size) return false;
+        for (usize i = 0; i < m_Size; ++i) {
+            if (m_Data[i] != other.m_Data[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     T *m_Data; 
     usize m_Size;
     usize m_Capacity;

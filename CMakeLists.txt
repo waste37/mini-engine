@@ -17,7 +17,7 @@ set (CMAKE_CXX_FLAGS "-Wall -Wextra -fno-exceptions")
 
 
 add_executable(ecs src/main.cpp src/WorldRegistry.cpp)
-target_link_libraries(ecs glfw GL)
+#target_link_libraries(ecs glfw GL)
 target_include_directories(ecs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_custom_target(run
     COMMAND ecs

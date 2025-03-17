@@ -1,9 +1,8 @@
 #include <WorldRegistry.h>
 
 bool WorldRegistry::Create() {
-    m_RegisteredComponents.ComponentCount = 0;
-    std::memset(m_RegisteredComponents.Sizes, 0, ComponentMetadata::MAX_COMPONENTS * sizeof(*m_RegisteredComponents.Sizes));
-    std::memset(m_RegisteredComponents.TypeMasks, 0, ComponentMetadata::MAX_COMPONENTS * sizeof(*m_RegisteredComponents.TypeMasks));
+    m_RegisteredComponents.Sizes.Resize(1);
+    m_RegisteredComponents.Names.Resize(1);
     m_Entities.Resize(1);
     return true;
 }
@@ -16,18 +15,17 @@ void WorldRegistry::Destroy() {
     }
 }
 
-u64 WorldRegistry::RegisterComponent(usize size) {
-    if (m_RegisteredComponents.ComponentCount >= ComponentMetadata::MAX_COMPONENTS) {
-        return ComponentMetadata::NULL_COMPONENT;
+void WorldRegistry::RegisterComponent(const char *name, u32 id, usize size) {
+    if (id >= m_RegisteredComponents.Sizes.Size() - 1) {
+        m_RegisteredComponents.Sizes.Resize(id + 1);
+        m_RegisteredComponents.Names.Resize(id + 1);
     }
-    u64 typemask = (1 << m_RegisteredComponents.ComponentCount);
-    m_RegisteredComponents.Sizes[m_RegisteredComponents.ComponentCount] = size;
-    m_RegisteredComponents.TypeMasks[m_RegisteredComponents.ComponentCount] = typemask;
-    m_RegisteredComponents.ComponentCount++;
-    return typemask;
+
+    m_RegisteredComponents.Sizes[id] = size;
+    m_RegisteredComponents.Names[id] = name;
 }
 
-Entity WorldRegistry::CreateEntity(u64 typemask) {
+Entity WorldRegistry::CreateEntity(const Vector<u32> &component_ids) {
     // entity ids are strictly > 0 so that we can represent undefined entities using 0
     // we don't care about overflow as probably memory ends before that!
     Entity e;
@@ -42,13 +40,14 @@ Entity WorldRegistry::CreateEntity(u64 typemask) {
         e.Version = ++m_Entities[e.Index].Version;
     }
 
-    ChunkList *type = RegisterType(typemask);
+    ChunkList *type = RegisterType(component_ids);
     if (type == nullptr) return NULL_ENTITY;
     m_Entities[e.Index].TypeInfo = type;
 
     Chunk *chunk = nullptr;
     if (type->Chunks[type->Chunks.Size()-1].Count == type->Chunks[type->Chunks.Size()-1].EntityCapacity) {
         printf("need to create a new chunk\n");
+        std::exit(1);
     } else {
         chunk = &type->Chunks[type->Chunks.Size()-1];
     }
@@ -86,7 +85,7 @@ bool WorldRegistry::DeleteEntity(Entity e) {
     return true;
 }
 
-void *WorldRegistry::GetComponentData(Entity e, u64 mask) {
+void *WorldRegistry::GetComponentData(Entity e, u32 component_id) {
     if (e.Index >= m_Entities.Size()) {
         return nullptr;
     }
@@ -95,41 +94,55 @@ void *WorldRegistry::GetComponentData(Entity e, u64 mask) {
         return nullptr;
     }
     usize offset = sizeof(Entity) * info->Chunk->EntityCapacity;
-    u64 typemask = info->TypeInfo->TypeMask;
-    for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
-        if (m_RegisteredComponents.TypeMasks[i] & mask) {
-            offset += m_RegisteredComponents.Sizes[i] * info->IndexInChunk;
-            // we have computed our offset..
+    for (usize i = 0; i < info->TypeInfo->ComponentsIDs.Size(); ++i) {
+        u32 id = info->TypeInfo->ComponentsIDs[i];
+        usize comp_size = m_RegisteredComponents.Sizes[id];
+        if (id == component_id) {
+            offset += comp_size * info->IndexInChunk;
             break;
-        }
-        if ((m_RegisteredComponents.TypeMasks[i] & typemask) == 0) {
-            continue;
         }
         offset += m_RegisteredComponents.Sizes[i] * info->Chunk->EntityCapacity;
     }
+
+    // u64 typemask = info->TypeInfo->TypeMask;
+    // for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
+    //     if (m_RegisteredComponents.TypeMasks[i] & mask) {
+    //         offset += m_RegisteredComponents.Sizes[i] * info->IndexInChunk;
+    //         break;
+    //     }
+    //     if ((m_RegisteredComponents.TypeMasks[i] & typemask) == 0) {
+    //         continue;
+    //     }
+    //     offset += m_RegisteredComponents.Sizes[i] * info->Chunk->EntityCapacity;
+    // }
     return static_cast<u8*>(info->Chunk->Data) + offset;
 }
 
-ChunkList *WorldRegistry::RegisterType(u64 typemask) {
-    if (typemask == 0) {
+ChunkList *WorldRegistry::RegisterType(const Vector<u32> &component_ids) {
+    if (component_ids.Empty()) {
         return nullptr;
     }
     for (usize i = 0; i < m_Types.Size(); ++i) {
-        if (m_Types[i].TypeMask == typemask) {
+        if (m_Types[i].ComponentsIDs == component_ids) {
             return &m_Types[i];
         }
     }
+
     printf("creating new type\n");
     m_Types.Resize(m_Types.Size()+1);
+
     ChunkList *result = &m_Types[m_Types.Size() - 1];
-    result->TypeMask = typemask;
+    result->ComponentsIDs.Resize(component_ids.Size());
+    for (usize i = 0; i < component_ids.Size(); ++i) {
+        result->ComponentsIDs[i] = component_ids[i];
+    }
     result->Chunks.Resize(1);
     result->Chunks[0].Data = new u8[Chunk::CHUNK_SIZE];
+
     usize type_size = sizeof(Entity); // the 
-    for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
-        if (m_RegisteredComponents.TypeMasks[i] & typemask) {
-            type_size += m_RegisteredComponents.Sizes[i];
-        }
+    for (usize i = 0; i < result->ComponentsIDs.Size(); ++i) {
+        u32 id = result->ComponentsIDs[i];
+        type_size += m_RegisteredComponents.Sizes[id];
     }
 
     result->Chunks[0].EntityCapacity = Chunk::CHUNK_SIZE / type_size;
@@ -140,16 +153,21 @@ ChunkList *WorldRegistry::RegisterType(u64 typemask) {
 
 void WorldRegistry::DebugRegisteredComponents() const {
     printf("Currently registered components: \n");
-    for (usize i = 0; i < m_RegisteredComponents.ComponentCount; ++i) {
-        printf("component %zu: mask = 0x%lx, size=%zu\n", 
-                i, m_RegisteredComponents.TypeMasks[i], m_RegisteredComponents.Sizes[i]);
+    for (usize i = 0; i < m_RegisteredComponents.Names.Size(); ++i) {
+        printf("component %zu: name = %s, size=%zu\n", 
+                i, m_RegisteredComponents.Names[i], m_RegisteredComponents.Sizes[i]);
     }
 }
 
 void WorldRegistry::DebugRegisteredTypes() const {
     printf("Currently registered types: \n");
     for (usize i = 0; i < m_Types.Size(); ++i) {
-        printf("type %zu: mask = 0x%lx\n", i, m_Types[i].TypeMask);
+        printf("Type %zu\nComponents:\n", i);
+        for (usize j = 0; j < m_Types[i].ComponentsIDs.Size(); ++j) {
+            usize id = m_Types[i].ComponentsIDs[j];
+            printf("\tname: %s, size: %zu\n", m_RegisteredComponents.Names[id], m_RegisteredComponents.Sizes[id]);
+        }
+        printf("Chunks:\n");
         for (usize j = 0; j < m_Types[i].Chunks.Size(); ++j) {
             printf("\tchunk %zu: count: %zu max: %zu\n", j,
             m_Types[i].Chunks[j].Count, m_Types[i].Chunks[j].EntityCapacity);
@@ -170,5 +188,4 @@ void WorldRegistry::DebugRegisteredEntities() const {
     }
 }
 
-usize g_NextComponentID = 0;
-
+u32 g_NextComponentID = 1;

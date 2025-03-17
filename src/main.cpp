@@ -5,11 +5,11 @@
 
 // Specializations inheriting from UniqueIDProvider
 
-struct Position {
+struct Position : public IComponent<Position> {
     f32 x, y;
 };
 
-struct Velocity {
+struct Velocity : public IComponent<Velocity> {
     f32 dx, dy;
 };
 
@@ -21,31 +21,53 @@ struct Health {
 void bench() {
     WorldRegistry *world = new WorldRegistry;
     world->Create();
-    u64 positionmask = world->RegisterComponent(sizeof(Position));
-    u64 velocitymask = world->RegisterComponent(sizeof(Velocity));
+    world->RegisterComponent("Position", Position::ID(), sizeof(Position));
+    world->RegisterComponent("Velocity", Velocity::ID(), sizeof(Velocity));
     // Entity e1 = world->CreateEntity(positionmask | velocitymask);
     // Entity e2 = world->CreateEntity(positionmask | velocitymask);
 
     Position *pos;
+    Velocity *v;
     for (usize i = 0; i < 500; ++i) {
-        Entity e = world->CreateEntity(positionmask | velocitymask);
-        pos = (Position*)world->GetComponentData(e, positionmask);
+        Entity e = world->CreateEntity({1, 2});
+        pos = (Position*)world->GetComponentData(e, 1);
         pos->x = i + 10.0;
         pos->y = i + 11.0;
+        v = (Velocity*)world->GetComponentData(e, 2);
+        v->dx = i + 10.0;
+        v->dy = i + 11.0;
     }
+
     for (usize i = 0; i < 800; ++i) {
-        Entity e = world->CreateEntity(positionmask);
-        std::cout << e.Index << std::endl;
-        pos = (Position*)world->GetComponentData(e, positionmask);
-        pos->x = i + 10.0;
-        pos->y = i + 11.0;
+        Entity e = world->CreateEntity({1});
+        pos = (Position*)world->GetComponentData(e, 1);
+        pos->x = i + 20.0;
+        pos->y = i + 21.0;
     }
-    //world->Destroy();
+    // world->DebugRegisteredComponents();
+    // world->DebugRegisteredTypes();
+
+    world->Destroy();
 }
 
 int main() {
     bench();
 
+    // WorldRegistry *world = new WorldRegistry;
+    // world->Create();
+    // world->RegisterComponent("Position", Position::ID(), sizeof(Position));
+    // world->RegisterComponent("Velocity", Velocity::ID(), sizeof(Velocity));
+    // Entity e = world->CreateEntity({1, 2});
+    // Position *pos;
+    // pos = (Position*)world->GetComponentData(e, 1);
+    // pos->x = 20.0;
+    // pos->y = 21.0;
+
+    // pos = (Position*)world->GetComponentData(e, 1);
+    // printf("e pos: %f, %f\n", pos->x, pos->y);
+    // world->DebugRegisteredComponents();
+    // world->DebugRegisteredTypes();
+    // world->DebugRegisteredEntities();
     // pos = (Position*)world.GetComponentData(e2, positionmask);
     // pos->x = 20.0;
     // pos->y = 21.0;
