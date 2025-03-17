@@ -3,39 +3,28 @@
 #include "Types.h"
 #include "Vector.h"
 
-
-struct Entity {
-    u32 Index;
-    u32 Version;
-};
-
-constexpr Entity NULL_ENTITY = {0, 0};
-
-extern usize g_NextComponentID;
-template <typename D> struct IComponent {
-    static int ID() {
-        static int id = g_NextComponentID++;
+extern u32 g_NextComponentID;
+template <typename Component> 
+struct IComponent {
+    static u32 ID() {
+        static u32 id = g_NextComponentID++;
         return id;
     }
 };
 
-struct ComponentMetadata {
-    static constexpr i32 MAX_COMPONENTS = 63;
+struct ComponentInfo {
     static constexpr u64 NULL_COMPONENT = 0;
     static constexpr usize INVALID_INDEX = 0;
-    usize ComponentCount;
-    usize Sizes[MAX_COMPONENTS];
-    u64   TypeMasks[MAX_COMPONENTS];
-    static inline usize ComponentIndex(u64 typemask) {
-        if (typemask == 0) return INVALID_INDEX;
-        usize index = 0;
-        while ((typemask & 0x1) == 0) {
-            typemask >>= 1;
-            index++;
-        }
-        return index;
-    }
+    Vector<usize> Sizes{};
+    Vector<const char*> Names{};
 };
+
+struct Entity : public IComponent<Entity> {
+    u32 Index;
+    u32 Version;
+};
+
+constexpr Entity NULL_ENTITY = {.Index = 0, .Version = 0};
 
 struct Chunk {
     static constexpr usize CHUNK_SIZE = (16 * 1024);
@@ -45,21 +34,12 @@ struct Chunk {
 };
 
 struct ChunkList {
-    // a component could be a unique id or a bit in this mask
-    // to check wether a component is contained is faster in
-    // the latter case, however to retrieve the component location
-    // inside the chunk is fastest in the former, and it also
-    // allow us to avoid the problem of having at most 64 component?
-    // however having 64 components is not a problem, and
-    // we could use the offsets 
-    u64 TypeMask;
-    usize ComponentCount; //?? maybe unneded
-    // these grow one at the time
+    Vector<u32> ComponentsIDs{};
     Vector<Chunk> Chunks{};
 };
 
 struct EntityInfo {
-    Chunk *Chunk;
+    struct Chunk *Chunk;
     ChunkList *TypeInfo;
     u32 IndexInChunk;
     u32 Version;
@@ -67,25 +47,71 @@ struct EntityInfo {
 
 class WorldRegistry {
 public:
-
     WorldRegistry() = default;
     bool Create();
     void Destroy();
 
-    u64 RegisterComponent(usize size);
-    Entity CreateEntity(u64 typemask);
+    template <typename ...ComponentTypes>
+    Entity CreateEntity() {
+        Entity e = NextEntity();
+        (RegisterComponent<ComponentTypes>(), ...);
+        ChunkList *type = RegisterType<ComponentTypes...>();
+        m_Entities[e.Index].TypeInfo = type;
+        ChunkListPushEntity(e);
+        return e;
+    }
     bool DeleteEntity(Entity e);
-    void *GetComponentData(Entity e, u64 typemask);
-    bool SetComponentData(Entity e, u64 typemask, void *data);
-
+    template <typename T>
+    T *GetComponentData(Entity e) {
+        u32 component_id = T::ID();
+        if (e.Index >= m_Entities.Size()) {
+            return nullptr;
+        }
+        EntityInfo *info = &m_Entities[e.Index];
+        if (e.Version != info->Version) {
+            return nullptr;
+        }
+        usize offset = 0;
+        for (usize i = 0; i < info->TypeInfo->ComponentsIDs.Size(); ++i) {
+            u32 id = info->TypeInfo->ComponentsIDs[i];
+            usize size = m_RegisteredComponents.Sizes[id];
+            if (id == component_id) {
+                offset += size * info->IndexInChunk;
+                break;
+            }
+            offset += size * info->Chunk->EntityCapacity;
+        }
+        return (T*)((u8*)info->Chunk->Data + offset);
+    }
     void DebugRegisteredComponents() const;
     void DebugRegisteredTypes() const;
     void DebugRegisteredEntities() const;
 private:
-    ChunkList *RegisterType(u64 typemask);
-    // void PushEntity(Entity e, ChunkList *type);
-    // used for computing offsets inside chunks for retrieving the data
-    ComponentMetadata m_RegisteredComponents;
+    template <typename T>
+    void RegisterComponent() {
+        const char *name = typeid(T).name();
+        u32 id = T::ID();
+        usize size = sizeof(T);
+        if (!m_RegisteredComponents.Sizes.Size() || id >= m_RegisteredComponents.Sizes.Size() - 1) {
+            m_RegisteredComponents.Sizes.Resize(id + 1);
+            m_RegisteredComponents.Names.Resize(id + 1);
+        }
+        m_RegisteredComponents.Sizes[id] = size;
+        m_RegisteredComponents.Names[id] = name;
+    }
+
+    template <typename ...ComponentTypes>
+    ChunkList *RegisterType() {
+        Vector<u32> component_ids = {0};
+        (component_ids.Push(ComponentTypes::ID()), ...);
+        return RegisterTypeInternal(component_ids);
+    }
+
+    ChunkList *RegisterTypeInternal(const Vector<u32> &component_ids);
+    Entity NextEntity();
+    void ChunkListPushEntity(Entity e);
+
+    ComponentInfo m_RegisteredComponents{};
     Vector<EntityInfo> m_Entities{};
     Vector<i32> m_AvailableIDs{};
     Vector<ChunkList> m_Types{};
