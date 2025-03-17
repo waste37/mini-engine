@@ -10,7 +10,7 @@ bool WorldRegistry::Create() {
 void WorldRegistry::Destroy() {
     for (usize i = 0; i < m_Types.Size(); ++i) {
         for (usize j = 0; j < m_Types[i].Chunks.Size(); ++j) {
-            delete[] (u8*)m_Types[i].Chunks[i].Data;
+            delete[] (u8*)m_Types[i].Chunks[j].Data;
         }
     }
 }
@@ -46,8 +46,11 @@ Entity WorldRegistry::CreateEntity(const Vector<u32> &component_ids) {
 
     Chunk *chunk = nullptr;
     if (type->Chunks[type->Chunks.Size()-1].Count == type->Chunks[type->Chunks.Size()-1].EntityCapacity) {
-        printf("need to create a new chunk\n");
-        std::exit(1);
+        type->Chunks.Resize(type->Chunks.Size()+1);
+        chunk = &type->Chunks[type->Chunks.Size()-1];  
+        chunk->Count = 0;
+        chunk->Data = new u8[Chunk::CHUNK_SIZE];
+        chunk->EntityCapacity = type->Chunks[type->Chunks.Size()-2].EntityCapacity;
     } else {
         chunk = &type->Chunks[type->Chunks.Size()-1];
     }

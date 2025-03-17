@@ -28,7 +28,7 @@ void bench() {
 
     Position *pos;
     Velocity *v;
-    for (usize i = 0; i < 500; ++i) {
+    for (usize i = 0; i < 1000; ++i) {
         Entity e = world->CreateEntity({1, 2});
         pos = (Position*)world->GetComponentData(e, 1);
         pos->x = i + 10.0;
@@ -38,7 +38,7 @@ void bench() {
         v->dy = i + 11.0;
     }
 
-    for (usize i = 0; i < 800; ++i) {
+    for (usize i = 0; i < 1000; ++i) {
         Entity e = world->CreateEntity({1});
         pos = (Position*)world->GetComponentData(e, 1);
         pos->x = i + 20.0;
