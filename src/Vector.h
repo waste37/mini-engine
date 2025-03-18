@@ -34,6 +34,16 @@ public:
         }
     }
 
+    Vector(const Vector<T> &xs) {
+        m_Size = xs.m_Size;
+        m_Capacity = xs.m_Capacity;
+        m_Data = new T[m_Capacity];
+        
+        for (usize i = 0; i < m_Size; ++i) {
+            m_Data[i] = xs.m_Data[i];
+        }
+    }
+
     ~Vector() {
         delete[] m_Data;
     }
@@ -52,6 +62,15 @@ public:
         }
 
         return x;
+    }
+
+    void Reserve(usize size) {
+        m_Capacity = NearestPowerOfTwo(size);
+        T *new_data = new T[m_Capacity];
+        for (usize i = 0; i < m_Size; ++i) {
+            new_data[i] = std::move(m_Data[i]);
+        }
+        delete [] m_Data;
     }
 
     void Resize(usize size) {
@@ -106,6 +125,14 @@ public:
     usize m_Size;
     usize m_Capacity;
 private:
+    inline usize NearestPowerOfTwo(usize n) {
+        usize result = 0;
+        while (result < n) { 
+            result = (1 << result);
+        }
+        return result;
+    }
+
     inline void InitCapacityToPowerOfTwo() {
         m_Capacity = 2;
         while (m_Capacity < m_Size) {

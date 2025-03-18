@@ -2,11 +2,12 @@
 
 #include "Types.h"
 #include "Vector.h"
+#include <tuple>
 
 extern u32 g_NextComponentID;
 template <typename Component> 
 struct IComponent {
-    static u32 ID() {
+    static inline u32 ID() {
         static u32 id = g_NextComponentID++;
         return id;
     }
@@ -39,8 +40,8 @@ struct ChunkList {
 };
 
 struct EntityInfo {
-    struct Chunk *Chunk;
-    ChunkList *TypeInfo;
+    u32 ChunkIndex;
+    u32 TypeIndex;
     u32 IndexInChunk;
     u32 Version;
 };
@@ -55,8 +56,8 @@ public:
     Entity CreateEntity() {
         Entity e = NextEntity();
         (RegisterComponent<ComponentTypes>(), ...);
-        ChunkList *type = RegisterType<ComponentTypes...>();
-        m_Entities[e.Index].TypeInfo = type;
+        u32 type_index = RegisterType<ComponentTypes...>();
+        m_Entities[e.Index].TypeIndex = type_index;
         ChunkListPushEntity(e);
         return e;
     }
@@ -70,6 +71,45 @@ public:
     void DebugRegisteredComponents() const;
     void DebugRegisteredTypes() const;
     void DebugRegisteredEntities() const;
+
+    class ViewIterator {
+    public:
+        ViewIterator();
+        ViewIterator(const Vector<const ChunkList*> &types, const Vector<u32> &ids, const Vector<usize> *sizes);
+        void Next(); // go to next thing and get current
+        template <typename T>
+        T *Get() {  // get current entity data
+            return (T*)GetInternal(T::ID());
+        } 
+
+        inline bool AtEnd() {
+            if (m_AtEnd) return true;
+            return m_AtEnd = !(m_CurrentType < m_Types.Size() &&
+                   m_CurrentChunk < m_Types[m_CurrentType]->Chunks.Size() &&
+                   m_CurrentIndex < m_Types[m_CurrentType]->Chunks[m_CurrentChunk].Count);
+        }
+      //  void Delete(); // delete current thing
+    private:
+        void *GetInternal(u32 id);
+        void RebuildSlice();
+        void AdvanceSlice();
+        Vector<const ChunkList*> m_Types; // i have a vector of pointer to chunklists
+        const Vector<usize> *m_Sizes; // i have a vector of pointer to chunklists
+        usize m_CurrentType = 0;
+        usize m_CurrentChunk = 0;
+        usize m_CurrentIndex = 0;
+        bool m_AtEnd = false;
+
+        Vector<u32> m_IDs{};      // i have an id per component
+        Vector<void*> m_Slice{};  // m_IDs[i] == typeof(m_Slice[i])
+    };
+
+    template <typename ...ComponentTypes>
+    ViewIterator View() const {
+        Vector<u32> component_ids = {0};
+        (component_ids.Push(ComponentTypes::ID()), ...);
+        return ViewInternal(component_ids);
+    }
 private:
     template <typename T>
     void RegisterComponent() {
@@ -85,13 +125,14 @@ private:
     }
 
     template <typename ...ComponentTypes>
-    ChunkList *RegisterType() {
+    u32 RegisterType() {
         Vector<u32> component_ids = {0};
         (component_ids.Push(ComponentTypes::ID()), ...);
         return RegisterTypeInternal(component_ids);
     }
 
-    ChunkList *RegisterTypeInternal(const Vector<u32> &component_ids);
+    u32 RegisterTypeInternal(const Vector<u32> &component_ids);
+    ViewIterator ViewInternal(const Vector<u32> &component_ids) const;
     void *GetComponentDataInternal(Entity e, u32 component_id);
     Entity NextEntity();
     void ChunkListPushEntity(Entity e);
