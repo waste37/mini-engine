@@ -182,4 +182,101 @@ void WorldRegistry::DebugRegisteredEntities() const {
     }
 }
 
+WorldRegistry::ViewIterator WorldRegistry::ViewInternal(const Vector<u32> &component_ids) const {
+    Vector<const ChunkList*> good;
+    for (usize i = 0; i < m_Types.Size(); ++i) {
+        bool good_type = true;
+        for (usize j = 0; j < component_ids.Size(); ++j) {
+            bool contained = false;
+            for (usize t = 0; t < m_Types[i].ComponentsIDs.Size(); ++t) {
+                if (m_Types[i].ComponentsIDs[t] == component_ids[j]) {
+                    contained = true;
+                    break;
+                }
+            }
+            if (contained == false) {
+                good_type = false;
+                break;
+            }
+        }
+        if (good_type && m_Types[i].Chunks[0].Count) {
+            good.Push(&m_Types[i]);
+        }
+    }
+
+    if (good.Size() == 0) {
+        return ViewIterator();
+    }
+    return ViewIterator(good, component_ids, &m_RegisteredComponents.Sizes);
+}
+
+
+
+WorldRegistry::ViewIterator::ViewIterator() : m_AtEnd(false) {}
+
+WorldRegistry::ViewIterator::ViewIterator(const Vector<const ChunkList*> &types, const Vector<u32> &ids, const Vector<usize> *sizes)
+        : m_Types(types), m_Sizes(sizes), m_IDs(ids) {
+   // build the current slice
+    m_Slice.Resize(m_IDs.Size(), nullptr);
+    RebuildSlice();
+}
+
+
+void WorldRegistry::ViewIterator::Next() {
+    m_CurrentIndex++;
+    bool need_rebuild = false;
+    if (m_CurrentIndex == m_Types[m_CurrentType]->Chunks[m_CurrentChunk].Count) {
+        m_CurrentChunk++;
+        m_CurrentIndex = 0;
+        need_rebuild = true;
+    }
+
+    if (m_CurrentChunk == m_Types[m_CurrentType]->Chunks.Size()) {
+        m_CurrentType++;
+        m_CurrentChunk = 0;
+        m_CurrentIndex = 0;
+        need_rebuild = true;
+    }
+
+    if (!AtEnd()) {
+        if (need_rebuild) {
+            RebuildSlice();
+        } else {
+            AdvanceSlice();
+        }
+    }
+}
+
+void WorldRegistry::ViewIterator::RebuildSlice() {
+    usize offset = 0;
+    for (usize i = 0; i < m_Types[m_CurrentType]->ComponentsIDs.Size(); ++i) {
+        u32 id = m_Types[m_CurrentType]->ComponentsIDs[i];
+        usize size = (*m_Sizes)[id]; 
+        const Chunk *chunk = &m_Types[m_CurrentType]->Chunks[m_CurrentChunk];
+        for (usize i = 0; i < m_IDs.Size(); ++i) {
+            if (id == m_IDs[i]) {
+                m_Slice[i] = (u8*)chunk->Data + offset + size * m_CurrentIndex;
+                break;
+            }
+        }
+        offset += size * chunk->EntityCapacity;
+    }
+}
+
+void WorldRegistry::ViewIterator::AdvanceSlice() {
+    for (usize i = 0; i < m_Slice.Size(); ++i) {
+        u32 id = m_IDs[i];
+        m_Slice[i] = (u8*)m_Slice[i] + (*m_Sizes)[id];
+    }
+}
+
+void *WorldRegistry::ViewIterator::GetInternal(u32 component_id) {
+    for (usize i = 0; i < m_IDs.Size(); ++i) {
+        if (component_id == m_IDs[i]) {
+            return m_Slice[i];
+        }
+    }
+    return nullptr;
+}
+
 u32 g_NextComponentID = 0;
