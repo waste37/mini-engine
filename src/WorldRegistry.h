@@ -40,8 +40,8 @@ struct ChunkList {
 };
 
 struct EntityInfo {
-    struct Chunk *Chunk;
-    ChunkList *TypeInfo;
+    u32 ChunkIndex;
+    u32 TypeIndex;
     u32 IndexInChunk;
     u32 Version;
 };
@@ -56,8 +56,8 @@ public:
     Entity CreateEntity() {
         Entity e = NextEntity();
         (RegisterComponent<ComponentTypes>(), ...);
-        ChunkList *type = RegisterType<ComponentTypes...>();
-        m_Entities[e.Index].TypeInfo = type;
+        u32 type_index = RegisterType<ComponentTypes...>();
+        m_Entities[e.Index].TypeIndex = type_index;
         ChunkListPushEntity(e);
         return e;
     }
@@ -125,13 +125,13 @@ private:
     }
 
     template <typename ...ComponentTypes>
-    ChunkList *RegisterType() {
+    u32 RegisterType() {
         Vector<u32> component_ids = {0};
         (component_ids.Push(ComponentTypes::ID()), ...);
         return RegisterTypeInternal(component_ids);
     }
 
-    ChunkList *RegisterTypeInternal(const Vector<u32> &component_ids);
+    u32 RegisterTypeInternal(const Vector<u32> &component_ids);
     ViewIterator ViewInternal(const Vector<u32> &component_ids) const;
     void *GetComponentDataInternal(Entity e, u32 component_id);
     Entity NextEntity();

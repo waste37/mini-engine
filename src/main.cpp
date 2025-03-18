@@ -63,7 +63,7 @@ void BasicBenchmark() {
         p->dy = 0.0;
     }
 
- //   world.Destroy();
+    world.Destroy();
 }
 
 int main() {
