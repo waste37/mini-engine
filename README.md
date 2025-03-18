@@ -13,7 +13,7 @@ Mini Engine is a personal project where I experiment with a simple yet flexible 
 ### Core Features
 - [ ] **Entity-Component System (ECS)**
     - [x] CRUD operations for entities and components
-    - [ ] Component-based iterators/views
+    - [x] Component-based iterators/views
 - [ ] **World Definitions**
     - [ ] Load world configurations from a JSON file
 - [ ] **Deferred Shading Renderer**
