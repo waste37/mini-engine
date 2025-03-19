@@ -1,7 +1,10 @@
-#include <WorldRegistry.h>
+#include "WorldRegistry.h"
 
 bool WorldRegistry::Create() {
     RegisterComponent<Entity>();
+    m_Types.Reserve(128);
+    m_Entities.Reserve(128);
+    m_AvailableIDs.Reserve(128);
     m_Entities.Push({0, 0, 0, 0});
     return true;
 }

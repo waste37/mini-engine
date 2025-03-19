@@ -150,6 +150,14 @@ namespace Testing {
         return true;
     }
 
+    bool VectorReserve() {
+        Vector<int> v{};
+        v.Reserve(10);
+        if (v.Size() != 0) return false;
+        v.Resize(10);
+        return true;
+    }
+
 struct Position {
     f32 x, y;
 };
@@ -203,6 +211,7 @@ struct Velocity {
         RunTest("VectorPop", VectorPop);
         RunTest("VectorSize", VectorSize);
         RunTest("VectorResize", VectorResize);
+        RunTest("VectorReserve", VectorReserve);
         RunTest("WorldEntityCRUD", WorldEntityCRUD);
         std::cout << "\nWorldRegistry tests:\n";
         std::cout << "All tests passed\n\n";

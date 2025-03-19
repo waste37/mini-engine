@@ -2,10 +2,11 @@
 #include "Types.h"
 #include <ostream>
 #include <cstring>
+#include <cstdio>
 
 template <typename T>
 class Vector {
-    static constexpr usize INITIAL_CAPACITY = (1 << 3);
+    static constexpr usize INITIAL_CAPACITY = 8;
 public:
     Vector() : m_Data(new T[INITIAL_CAPACITY]), m_Size(0), m_Capacity(INITIAL_CAPACITY) { }
 
@@ -71,6 +72,7 @@ public:
             new_data[i] = std::move(m_Data[i]);
         }
         delete [] m_Data;
+        m_Data = new_data;
     }
 
     void Resize(usize size) {
@@ -78,9 +80,9 @@ public:
         while (m_Size >= m_Capacity) {
             Grow();
         }
-        while (m_Capacity > INITIAL_CAPACITY && m_Size <= m_Capacity / 2) {
-            Shrink();
-        }
+        // while (m_Capacity > INITIAL_CAPACITY && m_Size < m_Capacity / 2) {
+        //     Shrink();
+        // }
     }
 
     void Resize(usize size, T x) {
@@ -126,15 +128,16 @@ public:
     usize m_Capacity;
 private:
     inline usize NearestPowerOfTwo(usize n) {
-        usize result = 0;
+        usize result = 1;
+        usize i = 0;
         while (result < n) { 
-            result = (1 << result);
+            result = (1 << i++);
         }
         return result;
     }
 
     inline void InitCapacityToPowerOfTwo() {
-        m_Capacity = 2;
+        m_Capacity = INITIAL_CAPACITY;
         while (m_Capacity < m_Size) {
             m_Capacity = (1 << m_Capacity);
         }

@@ -11,7 +11,7 @@ Mini Engine is a personal project where I experiment with a simple yet flexible 
 ## Roadmap
 
 ### Core Features
-- [ ] **Entity-Component System (ECS)**
+- [x] **Entity-Component System (ECS)**
     - [x] CRUD operations for entities and components
     - [x] Component-based iterators/views
 - [ ] **World Definitions**

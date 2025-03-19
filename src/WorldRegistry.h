@@ -106,7 +106,7 @@ public:
 
     template <typename ...ComponentTypes>
     ViewIterator View() const {
-        Vector<u32> component_ids = {0};
+        Vector<u32> component_ids{};
         (component_ids.Push(ComponentTypes::ID()), ...);
         return ViewInternal(component_ids);
     }
