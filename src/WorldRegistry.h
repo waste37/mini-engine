@@ -1,13 +1,14 @@
 #pragma once
 
-#include "Types.h"
-#include "Vector.h"
+#include <Types.h>
+#include <Vector.h>
 #include <tuple>
 
 extern u32 g_NextComponentID;
-template <typename Component> 
+template <typename Component>
 struct IComponent {
-    static inline u32 ID() {
+    static inline u32 ID()
+    {
         static u32 id = g_NextComponentID++;
         return id;
     }
@@ -33,7 +34,7 @@ struct Chunk {
     static constexpr usize CHUNK_SIZE = (16 * 1024);
     usize EntityCapacity;
     usize Count;
-    void *Data;
+    void* Data;
 };
 
 struct ChunkList {
@@ -55,7 +56,8 @@ public:
     void Destroy();
 
     template <typename ...ComponentTypes>
-    Entity CreateEntity() {
+    Entity CreateEntity()
+    {
         Entity e = NextEntity();
         (RegisterComponent<ComponentTypes>(), ...);
         u32 type_index = RegisterType<ComponentTypes...>();
@@ -66,7 +68,8 @@ public:
 
     bool DeleteEntity(Entity e);
     template <typename T>
-    T *GetComponentData(Entity e) {
+    T* GetComponentData(Entity e)
+    {
         u32 component_id = T::ID();
         return (T*)GetComponentDataInternal(e, component_id);
     }
@@ -77,26 +80,28 @@ public:
     class ViewIterator {
     public:
         ViewIterator();
-        ViewIterator(const Vector<const ChunkList*> &types, const Vector<u32> &ids, const Vector<usize> *sizes);
+        ViewIterator(const Vector<const ChunkList*>& types, const Vector<u32>& ids, const Vector<usize>* sizes);
         void Next(); // go to next thing and get current
         template <typename T>
-        T *Get() {  // get current entity data
+        T* Get()
+        {  // get current entity data
             return (T*)GetInternal(T::ID());
-        } 
+        }
 
-        inline bool AtEnd() {
+        inline bool AtEnd()
+        {
             if (m_AtEnd) return true;
             return m_AtEnd = !(m_CurrentType < m_Types.Size() &&
-                   m_CurrentChunk < m_Types[m_CurrentType]->Chunks.Size() &&
-                   m_CurrentIndex < m_Types[m_CurrentType]->Chunks[m_CurrentChunk].Count);
+                m_CurrentChunk < m_Types[m_CurrentType]->Chunks.Size() &&
+                m_CurrentIndex < m_Types[m_CurrentType]->Chunks[m_CurrentChunk].Count);
         }
-      //  void Delete(); // delete current thing
+        //  void Delete(); // delete current thing
     private:
-        void *GetInternal(u32 id);
+        void* GetInternal(u32 id);
         void RebuildSlice();
         void AdvanceSlice();
         Vector<const ChunkList*> m_Types; // i have a vector of pointer to chunklists
-        const Vector<usize> *m_Sizes; // i have a vector of pointer to chunklists
+        const Vector<usize>* m_Sizes; // i have a vector of pointer to chunklists
         usize m_CurrentType = 0;
         usize m_CurrentChunk = 0;
         usize m_CurrentIndex = 0;
@@ -107,15 +112,17 @@ public:
     };
 
     template <typename ...ComponentTypes>
-    ViewIterator View() const {
+    ViewIterator View() const
+    {
         Vector<u32> component_ids{};
         (component_ids.Push(ComponentTypes::ID()), ...);
         return ViewInternal(component_ids);
     }
 private:
     template <typename T>
-    void RegisterComponent() {
-        const char *name = typeid(T).name();
+    void RegisterComponent()
+    {
+        const char* name = typeid(T).name();
         u32 id = T::ID();
         usize size = sizeof(T);
         if (!m_RegisteredComponents.Sizes.Size() || id >= m_RegisteredComponents.Sizes.Size() - 1) {
@@ -127,15 +134,16 @@ private:
     }
 
     template <typename ...ComponentTypes>
-    u32 RegisterType() {
-        Vector<u32> component_ids = {0};
+    u32 RegisterType()
+    {
+        Vector<u32> component_ids = { 0 };
         (component_ids.Push(ComponentTypes::ID()), ...);
         return RegisterTypeInternal(component_ids);
     }
 
-    u32 RegisterTypeInternal(const Vector<u32> &component_ids);
-    ViewIterator ViewInternal(const Vector<u32> &component_ids) const;
-    void *GetComponentDataInternal(Entity e, u32 component_id);
+    u32 RegisterTypeInternal(const Vector<u32>& component_ids);
+    ViewIterator ViewInternal(const Vector<u32>& component_ids) const;
+    void* GetComponentDataInternal(Entity e, u32 component_id);
     Entity NextEntity();
     void ChunkListPushEntity(Entity e);
 
