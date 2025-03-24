@@ -21,11 +21,13 @@ struct ComponentInfo {
 };
 
 struct Entity : public IComponent<Entity> {
+    constexpr Entity(u32 Index, u32 Version) : Index(Index), Version(Version) {}
+    Entity() : Index(0), Version(0) {}
     u32 Index;
     u32 Version;
 };
 
-constexpr Entity NULL_ENTITY = {.Index = 0, .Version = 0};
+constexpr Entity NULL_ENTITY = { 0, 0 };
 
 struct Chunk {
     static constexpr usize CHUNK_SIZE = (16 * 1024);
@@ -139,7 +141,7 @@ private:
 
     ComponentInfo m_RegisteredComponents{};
     Vector<EntityInfo> m_Entities{};
-    Vector<i32> m_AvailableIDs{};
+    Vector<u32> m_AvailableIDs{};
     Vector<ChunkList> m_Types{};
 };
 
