@@ -139,7 +139,7 @@ private:
     inline void InitCapacityToPowerOfTwo() {
         m_Capacity = INITIAL_CAPACITY;
         while (m_Capacity < m_Size) {
-            m_Capacity = (1 << m_Capacity);
+            m_Capacity = (1ull << m_Capacity);
         }
     }
 
