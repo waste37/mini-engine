@@ -16,20 +16,20 @@
 
 // a world has entities and components
 // the user implements systems
-//namespace Testing {
-//    // sample enum for foreground colors
-//    enum class FG : unsigned char {
-//        Def     = 39,
-//        Black   = 30,
-//        Red     = 31,
-//        Green   = 32,
-//        Yellow  = 33,
-//        Blue    = 34,
-//        Magenta = 35,
-//        Cyan    = 36,
-//        Gray    = 37
-//    };
-//
+namespace Testing {
+   // sample enum for foreground colors
+   enum class FG : unsigned char {
+       Def     = 39,
+       Black   = 30,
+       Red     = 31,
+       Green   = 32,
+       Yellow  = 33,
+       Blue    = 34,
+       Magenta = 35,
+       Cyan    = 36,
+       Gray    = 37
+   };
+
 //    // initialize them at start of program - mandatory
 //    // so that even if user redirects, we've a copy
 //    std::streambuf const *coutbuf = std::cout.rdbuf();
@@ -52,37 +52,37 @@
 //        return isatty(fileno(currentStream));
 //    }
 //
-//    // will check if TERM supports color and isTerminal()
-//    inline std::ostream &operator<<(std::ostream &os, FG v) {
-//        std::streambuf const *osbuf = os.rdbuf();
-//        return IsTerminal(osbuf) ? os << "\e[" << static_cast<int>(v) << "m" : os;
-//    }
-//
-//    bool VectorConstructor() {
-//        {
-//            Vector<int> v{};
-//            std::stringstream s;
-//            s << v;
-//            if (s.str() != "{}") return false;
-//        }
-//        {
-//            Vector<int> v(10);
-//            if (v.Size() != 10) return false;
-//        }
-//        {
-//            Vector<int> v(10, 6);
-//            std::stringstream s;
-//            s << v;
-//            if (s.str() != "{6, 6, 6, 6, 6, 6, 6, 6, 6, 6}") return false;
-//        }
-//        {
-//            Vector<int> v = {1,2,3};
-//            std::stringstream s;
-//            s << v;
-//            if (s.str() != "{1, 2, 3}") return false;
-//        }
-//        return true;
-//    }
+   // will check if TERM supports color and isTerminal()
+   inline std::ostream &operator<<(std::ostream &os, FG v) {
+       std::streambuf const *osbuf = os.rdbuf();
+       return os;
+   }
+
+   bool VectorConstructor() {
+       {
+           Vector<int> v{};
+           std::stringstream s;
+           s << v;
+           if (s.str() != "{}") return false;
+       }
+       {
+           Vector<int> v(10);
+           if (v.Size() != 10) return false;
+       }
+       {
+           Vector<int> v(10, 6);
+           std::stringstream s;
+           s << v;
+           if (s.str() != "{6, 6, 6, 6, 6, 6, 6, 6, 6, 6}") return false;
+       }
+       {
+           Vector<int> v = {1,2,3};
+           std::stringstream s;
+           s << v;
+           if (s.str() != "{1, 2, 3}") return false;
+       }
+       return true;
+   }
 
     bool VectorPush() {
         {

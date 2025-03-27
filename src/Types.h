@@ -5,8 +5,9 @@
 
 // integers
 typedef int32_t i32;
+typedef uint64_t u64;
 typedef int64_t i64;
-// floating points
+
 typedef float f32;
 typedef double f64;
 // unsigned
@@ -43,3 +44,4 @@ struct s16 {
     isize Length;
 };
 
+typedef int32_t b32;

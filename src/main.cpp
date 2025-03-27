@@ -18,7 +18,7 @@ public:
     ~Timer()
     {
         const auto dt = elapsed();
-        std::cout << "elapsed: " << dt.count() / 1000.0 << "ms" << std::endl;
+        std::cout << "elapsed: " << dt.count() / 1e+6 << "ms" << std::endl;
     }
 
     std::chrono::nanoseconds elapsed()
@@ -28,21 +28,20 @@ public:
     }
 
     void reset() { beg = std::chrono::steady_clock::now(); }
-
 private:
     std::chrono::steady_clock::time_point beg, end;
 };
 
 
-struct Position : public IComponent<Position> {
+struct Position {
     f32 x, y;
 };
 
-struct Velocity : public IComponent<Velocity> {
+struct Velocity {
     f32 dx, dy;
 };
 
-struct Health : public IComponent<Health> {
+struct Health {
     i32 health;
     i32 armor;
 };
@@ -82,7 +81,7 @@ void BasicBenchmark()
     }
 
     {
-        auto t = Timer();
+        Timer t = Timer();
         for (WorldRegistry::ViewIterator it = world.View<Position>(); !it.AtEnd(); it.Next()) {
             Position* p = it.Get<Position>();
             p->x = 0.0f;
@@ -113,37 +112,170 @@ void BasicBenchmark()
     world.Destroy();
 }
 
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/scene.h>           // Output data structure
+#include <assimp/postprocess.h>     // Post processing flags
+
 struct Mesh {
-    Vector<Vec3> vertices;
-    Vector<Vec3> normals;
-    Vector<i32> indices;
+    Vec3 *Vertices;
+    Vec3 *Normals;
+    Vec2 *UVs;
+    u32 *Indices;
+    isize VertexCount;
+    isize IndexCount;
 };
 
-usize FileSize(const char* filename)
-{
-    std::error_code ec;
-    return std::filesystem::file_size(filename, ec);
+struct ModelImportResult {
+    Vector<Mesh> Meshes = {};
+    b32 Ok = false;
+};
+
+Mesh ProcessMesh(const aiMesh *mesh) {
+    Mesh m = {};
+    m.VertexCount = mesh->mNumVertices;
+    m.Vertices = new Vec3[mesh->mNumVertices]; 
+    m.Normals = new Vec3[mesh->mNumVertices];
+    m.UVs = new Vec2[mesh->mNumVertices];
+    
+    for (usize i = 0; i < mesh->mNumVertices; ++i) {
+        m.Vertices[i][0] = mesh->mVertices[i].x;
+        m.Vertices[i][1] = mesh->mVertices[i].y;
+        m.Vertices[i][2] = mesh->mVertices[i].z;
+
+        m.Normals[i][0] = mesh->mNormals[i].x;
+        m.Normals[i][1] = mesh->mNormals[i].y;
+        m.Normals[i][2] = mesh->mNormals[i].z;
+
+        if (mesh->mTextureCoords[0]) {
+            m.UVs[i][0] = mesh->mTextureCoords[0][i].x;
+            m.UVs[i][1] = mesh->mTextureCoords[0][i].y;
+        } else {
+            m.UVs[i] = {0.0f, 0.0f};
+        }
+    }
+
+    for (usize i = 0; i < mesh->mNumFaces; ++i) {
+        m.IndexCount += mesh->mFaces[i].mNumIndices;
+    }
+
+    m.Indices = new u32[m.IndexCount];
+    
+    isize k = 0;
+    for (usize i = 0; i < mesh->mNumFaces; ++i) {
+        aiFace face = mesh->mFaces[i];
+        for (usize j = 0; j < face.mNumIndices; ++j) {
+            m.Indices[k++] = face.mIndices[j];
+        }
+    }
+
+    std::cout << "mesh has material " << mesh->mMaterialIndex << std::endl;
+
+    return m;
 }
 
-usize ReadFile(char* buf, usize size, const char* filename)
+void ProcessNode(Vector<Mesh> *meshes, const aiNode *node, const aiScene *scene) 
 {
-    std::ifstream in(filename, std::ios::binary);
-    in.read(buf, size);
-    usize read_bytes = in ? size : in.gcount();
-    buf[read_bytes] = '\0';
-    in.close();
-    return read_bytes;
+    for (usize i = 0; i < node->mNumMeshes; ++i) {
+        aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
+        meshes->Push(ProcessMesh(mesh));
+    }
+
+    for (usize i = 0; i < node->mNumChildren; ++i) {
+        ProcessNode(meshes, node->mChildren[i], scene);
+    }
+}
+
+ModelImportResult ImportModel(const char *filename) {
+    ModelImportResult result = {};
+    // Create an instance of the Importer class..
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(filename, aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType); 
+    if (nullptr == scene) {
+        return result;
+    }
+    
+    result.Meshes.Reserve(scene->mNumMeshes);
+    ProcessNode(&result.Meshes, scene->mRootNode, scene);
+
+    result.Ok = true;
+    return result;
+}
+
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
+u32 CompileShader(const char *vertex_shader_path, const char *fragment_shader_path) 
+{ 
+}
+
+void RenderSimpleScene(Vector<Mesh> meshes) {
+    glfwInit();
+    GLFWwindow *window = glfwCreateWindow(800, 800, "test", nullptr, nullptr);
+
+    glfwMakeContextCurrent(window);
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        return;
+    }
+
+    Vector<u32> VAOs;
+    Vector<u32> VBOs;
+    Vector<u32> EBOs;
+
+    VAOs.Resize(meshes.Size(), 0);
+    VBOs.Resize(meshes.Size(), 0);
+    EBOs.Resize(meshes.Size(), 0);
+
+    for (isize i = 0; i < meshes.Size(); ++i) {
+        Mesh &m = meshes[i];
+        glGenVertexArrays(1, &VAOs[i]);
+        glGenBuffers(1, &VBOs[i]);
+        glGenBuffers(1, &EBOs[i]);
+      
+        glBindVertexArray(VAOs[i]);
+        glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
+
+        glBufferData(GL_ARRAY_BUFFER, m.VertexCount * (sizeof(Vec3) + sizeof(Vec3) + sizeof(Vec2)), &m, GL_STATIC_DRAW);  
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[i]);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, m.IndexCount * sizeof(u32), &m.Indices, GL_STATIC_DRAW);
+
+        // vertex positions
+        glEnableVertexAttribArray(0);	
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        // vertex normals
+        glEnableVertexAttribArray(1);	
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)(sizeof(Vec3) * m.VertexCount));
+        // vertex texture coords
+        glEnableVertexAttribArray(2);	
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*)(2 * sizeof(Vec3) * m.VertexCount));
+
+        glBindVertexArray(0);
+    }
+
+    glViewport(0.0f, 0.0f, 800.0f, 800.0f);
+
+    while (!glfwWindowShouldClose(window)) {
+        glClear(GL_COLOR_BUFFER_BIT);
+        for (isize i = 0; i < meshes.Size(); ++i) {
+            glBindVertexArray(VAOs[i]):
+            glDrawElements(GL_TRIANGLES, m.IndexCount, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0):
+        }
+
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
 }
 
 i32 main()
-{
-    usize filesize = FileSize("assets/cube.obj");
-    std::cout << filesize << std::endl;
-    char* buf = new char[filesize + 1];
-    if (filesize != ReadFile(buf, filesize, "assets/cube.obj")) {
-        std::cout << "problems reading\n";
+{ 
+    ModelImportResult result = ImportModel("assets/Mech_F_432/Material/mech_f_432.obj");
+    if (result.Ok) {
+        RenderSimpleScene(result.Meshes);
     }
-    std::cout << buf << "#" << std::endl;
-    delete[] buf;
 }
 

@@ -1,6 +1,12 @@
 #include <cassert>
 
 struct Vec3 {
+    Vec3() {
+        m_Data[0] = 0.0f;
+        m_Data[1] = 0.0f;
+        m_Data[2] = 0.0f;
+    }
+
     Vec3(f32 v)
     {
         m_Data[0] = v;
@@ -98,6 +104,12 @@ struct Color : public Vec3 {
 };
 
 struct Vec2 {
+    Vec2() 
+    {
+        m_Data[0] = 0.0f;
+        m_Data[1] = 0.0f;
+    }
+
     Vec2(f32 v)
     {
         m_Data[0] = v;

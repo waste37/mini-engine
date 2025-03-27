@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.15...3.31)
 project(mini-engine
     VERSION 0.1
-    DESCRIPTION "A ECS based mini-engine with deferred rendering"
-    LANGUAGES CXX)
+    DESCRIPTION "A ECS based mini-engine with deferred rendering")
 
 # choosing compiler and setting flags
 
@@ -26,9 +25,10 @@ endif()
 ###########################################
 
 set(MINI_ENGINE_EXECUTABLE_NAME mini)
-add_executable(${MINI_ENGINE_EXECUTABLE_NAME} src/main.cpp src/WorldRegistry.cpp src/Platform.cpp)
 
-target_include_directories(${MINI_ENGINE_EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_executable(${MINI_ENGINE_EXECUTABLE_NAME} src/main.cpp src/WorldRegistry.cpp src/Platform.cpp src/glad/src/glad.c)
+
+target_include_directories(${MINI_ENGINE_EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/glad/include)
 
 # Adding platform specific sources
 if (WIN32)
@@ -42,7 +42,7 @@ endif()
 # declaring and locating dependencies
 # OpenGL
 find_package(OpenGL REQUIRED)
-target_link_libraries(${MINI_ENGINE_EXECUTABLE_NAME} OpenGL::GL)
+target_link_libraries(${MINI_ENGINE_EXECUTABLE_NAME} OpenGL::GL assimp)
 # GLFW
 if (WIN32)
     set(GLFW_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/lib/glfw/include")
@@ -56,9 +56,9 @@ endif()
 ###########################################
 
 add_custom_target(run
-    COMMAND ecs
-    DEPENDS ecs
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} 
+    COMMAND ${MINI_ENGINE_EXECUTABLE_NAME}
+    DEPENDS ${MINI_ENGINE_EXECUTABLE_NAME}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} 
     COMMENT "Running... "
 )
 
@@ -67,6 +67,6 @@ target_include_directories(testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_custom_target(test
     COMMAND testing
     DEPENDS testing
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} 
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} 
     COMMENT "Running tests... "
 )

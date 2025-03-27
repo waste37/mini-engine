@@ -12,8 +12,8 @@ bool WorldRegistry::Create()
 
 void WorldRegistry::Destroy()
 {
-    for (usize i = 0; i < m_Types.Size(); ++i) {
-        for (usize j = 0; j < m_Types[i].Chunks.Size(); ++j) {
+    for (isize i = 0; i < m_Types.Size(); ++i) {
+        for (isize j = 0; j < m_Types[i].Chunks.Size(); ++j) {
             delete[](u8*)m_Types[i].Chunks[j].Data;
         }
     }
@@ -38,19 +38,19 @@ bool WorldRegistry::DeleteEntity(Entity e)
     Chunk* chunk = &type->Chunks[info->ChunkIndex];
     // swap last entity with the one that is being deleted
     if (chunk->Count > 1) {
-        usize last = chunk->Count - 1;
-        usize cur = info->IndexInChunk;
+        isize last = chunk->Count - 1;
+        isize cur = info->IndexInChunk;
 
         Entity* last_entity = (Entity*)chunk->Data + last;
         m_Entities[last_entity->Index].IndexInChunk = cur;
 
-        usize offset = 0;
-        for (usize i = 0; i < type->ComponentsIDs.Size(); ++i) {
+        isize offset = 0;
+        for (isize i = 0; i < type->ComponentsIDs.Size(); ++i) {
             u32 id = type->ComponentsIDs[i];
-            usize size = m_RegisteredComponents.Sizes[id];
+            isize size = m_RegisteredComponents.Sizes[id];
             u8* component_cur = (u8*)(chunk->Data) + offset + size * cur;
             u8* component_last = (u8*)(chunk->Data) + offset + size * last;
-            for (usize byte = 0; byte < size; ++byte) {
+            for (isize byte = 0; byte < size; ++byte) {
                 component_cur[byte] = component_last[byte];
             }
             offset += size * chunk->EntityCapacity;
@@ -81,7 +81,7 @@ Entity WorldRegistry::NextEntity()
     return e;
 }
 
-void* WorldRegistry::GetComponentDataInternal(Entity e, u32 component_id)
+byte* WorldRegistry::GetComponentDataInternal(Entity e, u32 component_id)
 {
     if (e.Index >= m_Entities.Size()) {
         return nullptr;
@@ -95,22 +95,22 @@ void* WorldRegistry::GetComponentDataInternal(Entity e, u32 component_id)
     ChunkList* type = &m_Types[info->TypeIndex];
     Chunk* chunk = &type->Chunks[info->ChunkIndex];
 
-    usize offset = 0;
-    for (usize i = 0; i < type->ComponentsIDs.Size(); ++i) {
+    isize offset = 0;
+    for (isize i = 0; i < type->ComponentsIDs.Size(); ++i) {
         u32 id = type->ComponentsIDs[i];
-        usize size = m_RegisteredComponents.Sizes[id];
+        isize size = m_RegisteredComponents.Sizes[id];
         if (id == component_id) {
             offset += size * info->IndexInChunk;
             break;
         }
         offset += size * chunk->EntityCapacity;
     }
-    return (u8*)chunk->Data + offset;
+    return chunk->Data + offset;
 }
 
 u32 WorldRegistry::RegisterTypeInternal(const Vector<u32>& component_ids)
 {
-    for (usize i = 0; i < m_Types.Size(); ++i) {
+    for (isize i = 0; i < m_Types.Size(); ++i) {
         if (m_Types[i].ComponentsIDs == component_ids) {
             return i;
         }
@@ -121,15 +121,15 @@ u32 WorldRegistry::RegisterTypeInternal(const Vector<u32>& component_ids)
     ChunkList* result = &m_Types[m_Types.Size() - 1];
 
     result->ComponentsIDs.Resize(component_ids.Size());
-    for (usize i = 0; i < component_ids.Size(); ++i) {
+    for (isize i = 0; i < component_ids.Size(); ++i) {
         result->ComponentsIDs[i] = component_ids[i];
     }
 
     result->Chunks.Resize(1);
-    result->Chunks[0].Data = new u8[Chunk::CHUNK_SIZE];
+    result->Chunks[0].Data = new byte[Chunk::CHUNK_SIZE];
 
-    usize type_size = 0; // the 
-    for (usize i = 0; i < result->ComponentsIDs.Size(); ++i) {
+    isize type_size = 0; // the 
+    for (isize i = 0; i < result->ComponentsIDs.Size(); ++i) {
         u32 id = result->ComponentsIDs[i];
         type_size += m_RegisteredComponents.Sizes[id];
     }
@@ -147,7 +147,7 @@ void WorldRegistry::ChunkListPushEntity(Entity e)
         type->Chunks.Resize(type->Chunks.Size() + 1);
         chunk = &type->Chunks[type->Chunks.Size() - 1];
         chunk->Count = 0;
-        chunk->Data = new u8[Chunk::CHUNK_SIZE];
+        chunk->Data = new byte[Chunk::CHUNK_SIZE];
         chunk->EntityCapacity = type->Chunks[type->Chunks.Size() - 2].EntityCapacity;
     } else {
         chunk = &type->Chunks[type->Chunks.Size() - 1];
@@ -164,7 +164,7 @@ void WorldRegistry::ChunkListPushEntity(Entity e)
 void WorldRegistry::DebugRegisteredComponents() const
 {
     printf("Currently registered components: \n");
-    for (usize i = 0; i < m_RegisteredComponents.Names.Size(); ++i) {
+    for (isize i = 0; i < m_RegisteredComponents.Names.Size(); ++i) {
         printf("component %zu: name = %s, size=%zu\n",
             i, m_RegisteredComponents.Names[i], m_RegisteredComponents.Sizes[i]);
     }
@@ -173,14 +173,14 @@ void WorldRegistry::DebugRegisteredComponents() const
 void WorldRegistry::DebugRegisteredTypes() const
 {
     printf("Currently registered types: \n");
-    for (usize i = 0; i < m_Types.Size(); ++i) {
+    for (isize i = 0; i < m_Types.Size(); ++i) {
         printf("Type %zu\nComponents:\n", i);
-        for (usize j = 0; j < m_Types[i].ComponentsIDs.Size(); ++j) {
-            usize id = m_Types[i].ComponentsIDs[j];
+        for (isize j = 0; j < m_Types[i].ComponentsIDs.Size(); ++j) {
+            isize id = m_Types[i].ComponentsIDs[j];
             printf("\tname: %s, size: %zu\n", m_RegisteredComponents.Names[id], m_RegisteredComponents.Sizes[id]);
         }
         printf("Chunks:\n");
-        for (usize j = 0; j < m_Types[i].Chunks.Size(); ++j) {
+        for (isize j = 0; j < m_Types[i].Chunks.Size(); ++j) {
             printf("\tchunk %zu: count: %zu max: %zu\n", j,
                 m_Types[i].Chunks[j].Count, m_Types[i].Chunks[j].EntityCapacity);
         }
@@ -190,7 +190,7 @@ void WorldRegistry::DebugRegisteredTypes() const
 void WorldRegistry::DebugRegisteredEntities() const
 {
     printf("Currently registered entities: \n");
-    for (usize i = 1; i < m_Entities.Size(); ++i) {
+    for (isize i = 1; i < m_Entities.Size(); ++i) {
         printf("id: %zu, version: %u, type: %u, chunk: %u, position: %u\n",
             i,
             m_Entities[i].Version,
@@ -204,11 +204,11 @@ void WorldRegistry::DebugRegisteredEntities() const
 WorldRegistry::ViewIterator WorldRegistry::ViewInternal(const Vector<u32>& component_ids) const
 {
     Vector<const ChunkList*> good;
-    for (usize i = 0; i < m_Types.Size(); ++i) {
+    for (isize i = 0; i < m_Types.Size(); ++i) {
         bool good_type = true;
-        for (usize j = 0; j < component_ids.Size(); ++j) {
+        for (isize j = 0; j < component_ids.Size(); ++j) {
             bool contained = false;
-            for (usize t = 0; t < m_Types[i].ComponentsIDs.Size(); ++t) {
+            for (isize t = 0; t < m_Types[i].ComponentsIDs.Size(); ++t) {
                 if (m_Types[i].ComponentsIDs[t] == component_ids[j]) {
                     contained = true;
                     break;
@@ -232,7 +232,7 @@ WorldRegistry::ViewIterator WorldRegistry::ViewInternal(const Vector<u32>& compo
 
 WorldRegistry::ViewIterator::ViewIterator() : m_AtEnd(false) {}
 
-WorldRegistry::ViewIterator::ViewIterator(const Vector<const ChunkList*>& types, const Vector<u32>& ids, const Vector<usize>* sizes)
+WorldRegistry::ViewIterator::ViewIterator(const Vector<const ChunkList*>& types, const Vector<u32>& ids, const Vector<isize>* sizes)
     : m_Types(types), m_Sizes(sizes), m_IDs(ids)
 {
     // build the current slice
@@ -269,14 +269,14 @@ void WorldRegistry::ViewIterator::Next()
 
 void WorldRegistry::ViewIterator::RebuildSlice()
 {
-    usize offset = 0;
-    for (usize i = 0; i < m_Types[m_CurrentType]->ComponentsIDs.Size(); ++i) {
+    isize offset = 0;
+    for (isize i = 0; i < m_Types[m_CurrentType]->ComponentsIDs.Size(); ++i) {
         u32 id = m_Types[m_CurrentType]->ComponentsIDs[i];
-        usize size = (*m_Sizes)[id];
+        isize size = (*m_Sizes)[id];
         const Chunk* chunk = &m_Types[m_CurrentType]->Chunks[m_CurrentChunk];
-        for (usize i = 0; i < m_IDs.Size(); ++i) {
+        for (isize i = 0; i < m_IDs.Size(); ++i) {
             if (id == m_IDs[i]) {
-                m_Slice[i] = (u8*)chunk->Data + offset + size * m_CurrentIndex;
+                m_Slice[i] = chunk->Data + offset + size * m_CurrentIndex;
                 break;
             }
         }
@@ -286,15 +286,15 @@ void WorldRegistry::ViewIterator::RebuildSlice()
 
 void WorldRegistry::ViewIterator::AdvanceSlice()
 {
-    for (usize i = 0; i < m_Slice.Size(); ++i) {
+    for (isize i = 0; i < m_Slice.Size(); ++i) {
         u32 id = m_IDs[i];
-        m_Slice[i] = (u8*)m_Slice[i] + (*m_Sizes)[id];
+        m_Slice[i] = m_Slice[i] + (*m_Sizes)[id];
     }
 }
 
-void* WorldRegistry::ViewIterator::GetInternal(u32 component_id)
+byte* WorldRegistry::ViewIterator::GetInternal(u32 component_id)
 {
-    for (usize i = 0; i < m_IDs.Size(); ++i) {
+    for (isize i = 0; i < m_IDs.Size(); ++i) {
         if (component_id == m_IDs[i]) {
             return m_Slice[i];
         }
