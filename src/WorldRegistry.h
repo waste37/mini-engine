@@ -4,24 +4,27 @@
 #include <Vector.h>
 #include <tuple>
 
-extern u32 g_NextComponentID;
-template <typename Component>
-struct IComponent {
-    static inline u32 ID()
-    {
-        static u32 id = g_NextComponentID++;
-        return id;
+class UniqueIDGenerator {
+    static u32 Identifier() {
+        static u32 value = 0;
+        return value++;
+    }
+public:
+    template <typename T>
+    static u32 Type() {
+        static const u32 value = Identifier();
+        return value;
     }
 };
 
 struct ComponentInfo {
     static constexpr u64 NULL_COMPONENT = 0;
-    static constexpr usize INVALID_INDEX = 0;
-    Vector<usize> Sizes{};
+    static constexpr isize INVALID_INDEX = 0;
+    Vector<isize> Sizes{};
     Vector<const char*> Names{};
 };
 
-struct Entity : public IComponent<Entity> {
+struct Entity {
     constexpr Entity(u32 Index, u32 Version) : Index(Index), Version(Version) {}
     Entity() : Index(0), Version(0) {}
     u32 Index;
@@ -31,9 +34,9 @@ struct Entity : public IComponent<Entity> {
 constexpr Entity NULL_ENTITY = { 0, 0 };
 
 struct Chunk {
-    static constexpr usize CHUNK_SIZE = (16 * 1024);
-    usize EntityCapacity;
-    usize Count;
+    static constexpr isize CHUNK_SIZE = (16 * 1024);
+    isize EntityCapacity;
+    isize Count;
     void* Data;
 };
 
@@ -70,7 +73,7 @@ public:
     template <typename T>
     T* GetComponentData(Entity e)
     {
-        u32 component_id = T::ID();
+        u32 component_id = UniqueIDGenerator::Type<T>();
         return (T*)GetComponentDataInternal(e, component_id);
     }
     void DebugRegisteredComponents() const;
@@ -80,12 +83,12 @@ public:
     class ViewIterator {
     public:
         ViewIterator();
-        ViewIterator(const Vector<const ChunkList*>& types, const Vector<u32>& ids, const Vector<usize>* sizes);
+        ViewIterator(const Vector<const ChunkList*>& types, const Vector<u32>& ids, const Vector<isize>* sizes);
         void Next(); // go to next thing and get current
         template <typename T>
         T* Get()
         {  // get current entity data
-            return (T*)GetInternal(T::ID());
+            return (T*)GetInternal(UniqueIDGenerator::Type<T>());
         }
 
         inline bool AtEnd()
@@ -101,10 +104,10 @@ public:
         void RebuildSlice();
         void AdvanceSlice();
         Vector<const ChunkList*> m_Types; // i have a vector of pointer to chunklists
-        const Vector<usize>* m_Sizes; // i have a vector of pointer to chunklists
-        usize m_CurrentType = 0;
-        usize m_CurrentChunk = 0;
-        usize m_CurrentIndex = 0;
+        const Vector<isize>* m_Sizes; // i have a vector of pointer to chunklists
+        isize m_CurrentType = 0;
+        isize m_CurrentChunk = 0;
+        isize m_CurrentIndex = 0;
         bool m_AtEnd = false;
 
         Vector<u32> m_IDs{};      // i have an id per component
@@ -115,7 +118,7 @@ public:
     ViewIterator View() const
     {
         Vector<u32> component_ids{};
-        (component_ids.Push(ComponentTypes::ID()), ...);
+        (component_ids.Push(UniqueIDGenerator::Type<ComponentTypes>()), ...);
         return ViewInternal(component_ids);
     }
 private:
@@ -123,8 +126,8 @@ private:
     void RegisterComponent()
     {
         const char* name = typeid(T).name();
-        u32 id = T::ID();
-        usize size = sizeof(T);
+        u32 id = UniqueIDGenerator::Type<T>();
+        isize size = sizeof(T);
         if (!m_RegisteredComponents.Sizes.Size() || id >= m_RegisteredComponents.Sizes.Size() - 1) {
             m_RegisteredComponents.Sizes.Resize(id + 1);
             m_RegisteredComponents.Names.Resize(id + 1);
@@ -137,7 +140,7 @@ private:
     u32 RegisterType()
     {
         Vector<u32> component_ids = { 0 };
-        (component_ids.Push(ComponentTypes::ID()), ...);
+        (component_ids.Push(UniqueIDGenerator::Type<ComponentTypes>()), ...);
         return RegisterTypeInternal(component_ids);
     }
 

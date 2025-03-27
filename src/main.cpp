@@ -28,7 +28,6 @@ public:
     }
 
     void reset() { beg = std::chrono::steady_clock::now(); }
-
 private:
     std::chrono::steady_clock::time_point beg, end;
 };
@@ -135,15 +134,53 @@ usize ReadFile(char* buf, usize size, const char* filename)
     return read_bytes;
 }
 
+
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/scene.h>           // Output data structure
+#include <assimp/postprocess.h>     // Post processing flags
+
+bool ImportFile(const char *filename) {
+    // Create an instance of the Importer class..
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(filename, aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_SortByPType); 
+    if (nullptr == scene) {
+        return false;
+    }
+
+    for (isize i = 0; i < scene->mNumMeshes; ++i) {
+        const auto &mesh = scene->mMeshes[i];
+        std::cout << "vectices: \n";
+        for (isize j = 0; j < mesh->mNumVertices; ++j) {
+            const auto &v = mesh->mVertices[j];
+            std::cout << v.x << " " << v.y << " " << v.z << std::endl;
+        }
+
+        std::cout << "textures: \n";
+        for (isize j = 0; j < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++j) {
+            const auto uvs = mesh->mTextureCoords[j];
+            if (uvs) {
+                std::cout << "uvs:\n";
+                for (isize k = 0; k < mesh->mNumVertices; k++) {
+                    const auto uv = uvs[k];
+                    if (mesh->mNumUVComponents[j] == 2) {
+                        std::cout << uv.x << " " << uv.y << std::endl;
+                    }
+                }
+            }
+        }
+        std::cout << "normals: \n";
+        for (isize j = 0; j < mesh->mNumVertices; ++j) {
+            const auto &v = mesh->mNormals[j];
+            std::cout << v.x << " " << v.y << " " << v.z << std::endl;
+        }
+
+    }
+
+    return true;
+}
+ 
 i32 main()
 {
-    usize filesize = FileSize("assets/cube.obj");
-    std::cout << filesize << std::endl;
-    char* buf = new char[filesize + 1];
-    if (filesize != ReadFile(buf, filesize, "assets/cube.obj")) {
-        std::cout << "problems reading\n";
-    }
-    std::cout << buf << "#" << std::endl;
-    delete[] buf;
+    return !ImportFile("assets/Mech_F_432/Material/mech_f_432.obj");
 }
 

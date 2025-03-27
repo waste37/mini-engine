@@ -42,7 +42,7 @@ endif()
 # declaring and locating dependencies
 # OpenGL
 find_package(OpenGL REQUIRED)
-target_link_libraries(${MINI_ENGINE_EXECUTABLE_NAME} OpenGL::GL)
+target_link_libraries(${MINI_ENGINE_EXECUTABLE_NAME} OpenGL::GL assimp)
 # GLFW
 if (WIN32)
     set(GLFW_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/lib/glfw/include")
@@ -56,9 +56,9 @@ endif()
 ###########################################
 
 add_custom_target(run
-    COMMAND ecs
-    DEPENDS ecs
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} 
+    COMMAND ${MINI_ENGINE_EXECUTABLE_NAME}
+    DEPENDS ${MINI_ENGINE_EXECUTABLE_NAME}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} 
     COMMENT "Running... "
 )
 
@@ -67,6 +67,6 @@ target_include_directories(testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_custom_target(test
     COMMAND testing
     DEPENDS testing
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR} 
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} 
     COMMENT "Running tests... "
 )
