@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.15...3.31)
 project(mini-engine
     VERSION 0.1
-    DESCRIPTION "A ECS based mini-engine with deferred rendering"
-    LANGUAGES CXX)
+    DESCRIPTION "A ECS based mini-engine with deferred rendering")
 
 # choosing compiler and setting flags
 
@@ -26,9 +25,9 @@ endif()
 ###########################################
 
 set(MINI_ENGINE_EXECUTABLE_NAME mini)
-add_executable(${MINI_ENGINE_EXECUTABLE_NAME} src/main.cpp src/WorldRegistry.cpp)
+add_executable(${MINI_ENGINE_EXECUTABLE_NAME} src/main.cpp src/WorldRegistry.cpp src/glad/src/glad.c)
 
-target_include_directories(${MINI_ENGINE_EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${MINI_ENGINE_EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/glad/include)
 
 # Adding platform specific sources
 if (WIN32)

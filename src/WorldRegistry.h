@@ -37,7 +37,7 @@ struct Chunk {
     static constexpr isize CHUNK_SIZE = (16 * 1024);
     isize EntityCapacity;
     isize Count;
-    void* Data;
+    byte* Data;
 };
 
 struct ChunkList {
@@ -100,7 +100,7 @@ public:
         }
         //  void Delete(); // delete current thing
     private:
-        void* GetInternal(u32 id);
+        byte* GetInternal(u32 id);
         void RebuildSlice();
         void AdvanceSlice();
         Vector<const ChunkList*> m_Types; // i have a vector of pointer to chunklists
@@ -111,7 +111,7 @@ public:
         bool m_AtEnd = false;
 
         Vector<u32> m_IDs{};      // i have an id per component
-        Vector<void*> m_Slice{};  // m_IDs[i] == typeof(m_Slice[i])
+        Vector<byte*> m_Slice{};  // m_IDs[i] == typeof(m_Slice[i])
     };
 
     template <typename ...ComponentTypes>
@@ -146,7 +146,7 @@ private:
 
     u32 RegisterTypeInternal(const Vector<u32>& component_ids);
     ViewIterator ViewInternal(const Vector<u32>& component_ids) const;
-    void* GetComponentDataInternal(Entity e, u32 component_id);
+    byte* GetComponentDataInternal(Entity e, u32 component_id);
     Entity NextEntity();
     void ChunkListPushEntity(Entity e);
 
