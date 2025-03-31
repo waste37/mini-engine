@@ -5,7 +5,6 @@
 
 // integers
 typedef int32_t i32;
-typedef uint64_t u64;
 typedef int64_t i64;
 
 typedef float f32;
@@ -28,8 +27,8 @@ typedef uint8_t u8;
 typedef char16_t c16;
 
 // make macros work with signed sisze.
-#define sizeof(x)       (isize)sizeof(x)
-#define countof(a)      (sizeof(a) / sizeof(*(a)))
+//#define sizeof(x)       sizeof(x)
+// #define countof(a)      (sizeof(a) / sizeof(*(a)))
 #define lengthof(s)     (countof(s) - 1)
 
 #define s8(s) (s8){(u8 *)s, lengthof(s)}
@@ -44,4 +43,3 @@ struct s16 {
     isize Length;
 };
 
-typedef int32_t b32;

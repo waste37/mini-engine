@@ -1,10 +1,7 @@
 #include <WorldRegistry.h>
-// #include <LinearAlgebra.h>
+#include <Platform.h>
 #include <Geometry.h>
 #include <iostream>
-
-#include <filesystem>
-#include <fstream>
 
 #include <chrono>
 
@@ -204,13 +201,66 @@ ModelImportResult ImportModel(const char *filename) {
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 u32 CompileShader(const char *vertex_shader_path, const char *fragment_shader_path) 
 {
 
     s8 vertex_shader_code = ReadFile(vertex_shader_path);
-    s8 fragment_shader_code = ReadFile(frragment_shader_path);
+    s8 fragment_shader_code = ReadFile(fragment_shader_path);
+
+    char *v = (char*)vertex_shader_code.Data;
+    char *f = (char*)fragment_shader_code.Data;
+
+    int vl = (int) vertex_shader_code.Length;
+    int fl = (int) fragment_shader_code.Length;
+
+    u32 program_id = glCreateProgram();
+
+    u32 vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertex_shader_id, 1, &v, &vl);
+    glCompileShader(vertex_shader_id);
+
+    char infoLog[512];
+    b32 success;
+    {
+        success = true;
+        glGetShaderiv(vertex_shader_id, GL_COMPILE_STATUS, &success);
+        if(!success) {
+            glGetShaderInfoLog(vertex_shader_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        };
+    }
+
+
+    glAttachShader(program_id, vertex_shader_id);
+    u32 fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragment_shader_id, 1, &f, &fl);
+    glCompileShader(fragment_shader_id);
+
+    {
+        success = true;
+        glGetShaderiv(fragment_shader_id, GL_COMPILE_STATUS, &success);
+        if(!success) {
+            glGetShaderInfoLog(fragment_shader_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+        };
+    }
+    glAttachShader(program_id, fragment_shader_id);
+    glLinkProgram(program_id);
+
+    {
+        success = true;
+        glGetProgramiv(program_id, GL_LINK_STATUS, &success);
+        if(!success) {
+            glGetProgramInfoLog(program_id, 512, NULL, infoLog);
+            std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        }
+    }
+
+    return program_id;
 }
 
 void RenderSimpleScene(const Vector<Mesh> &meshes) {
@@ -227,6 +277,8 @@ void RenderSimpleScene(const Vector<Mesh> &meshes) {
         return;
     }
 
+    u32 shader = CompileShader("assets/shaders/default_vertex.glsl", "assets/shaders/default_fragment.glsl");
+
     Vector<u32> VAOs(meshes.Size(), 0);
     Vector<u32> VBOs(meshes.Size(), 0);
     Vector<u32> EBOs(meshes.Size(), 0);
@@ -239,28 +291,53 @@ void RenderSimpleScene(const Vector<Mesh> &meshes) {
         const Mesh &m = meshes[i];
         glBindVertexArray(VAOs[i]);
         glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
-        glBufferData(GL_ARRAY_BUFFER, m.VertexCount * (sizeof(Vec3) + sizeof(Vec3) + sizeof(Vec2)), m.Vertices, GL_STATIC_DRAW);  
+        glBufferData(GL_ARRAY_BUFFER, m.VertexCount * sizeof(Vertex), m.Vertices, GL_STATIC_DRAW);  
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[i]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, m.IndexCount * sizeof(u32), m.Indices, GL_STATIC_DRAW);
 
         // vertex positions
-        glEnableVertexAttribArray(0);	
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
         // vertex normals
-        glEnableVertexAttribArray(1);	
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)(sizeof(Vec3) * m.VertexCount));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, Normal));
         // vertex texture coords
-        glEnableVertexAttribArray(2);	
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, (void*)(2 * sizeof(Vec3) * m.VertexCount));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, UV));
 
         glBindVertexArray(0);
     }
 
+    glUseProgram(shader);
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::vec3 eye = glm::vec3(0.0f, 0.0f, -20.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    // note that we're translating the scene in the reverse direction of where we want to move
+    view = glm::translate(view, eye); 
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+    int modelLoc = glGetUniformLocation(shader, "ModelTransform");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    int viewLoc = glGetUniformLocation(shader, "ViewTransform");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    int projectionLoc = glGetUniformLocation(shader, "ProjectionTransform");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+    int viewvectorLoc = glGetUniformLocation(shader, "ViewVector");
+    glUniform3fv(viewvectorLoc, 1, glm::value_ptr(eye));
+
+    glEnable(GL_DEPTH_TEST);
+
     while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-        glClearColor(1.0, 1.0, 1.0, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.0, 0.0, 0.0, 1.0);
+        float time = glfwGetTime();
+        glm::mat4 rotated = glm::rotate(model, time, glm::vec3(0.0f, 1.0f, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(rotated));
+
         for (isize i = 0; i < meshes.Size(); ++i) {
+    
             glBindVertexArray(VAOs[i]);
             glDrawElements(GL_TRIANGLES, meshes[i].IndexCount, GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
