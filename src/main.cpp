@@ -116,10 +116,14 @@ void BasicBenchmark()
 #include <assimp/scene.h>           // Output data structure
 #include <assimp/postprocess.h>     // Post processing flags
 
+struct Vertex {
+    Vec3 Position;
+    Vec3 Normal;
+    Vec2 UV;
+};
+
 struct Mesh {
-    Vec3 *Vertices;
-    Vec3 *Normals;
-    Vec2 *UVs;
+    Vertex *Vertices;
     u32 *Indices;
     isize VertexCount;
     isize IndexCount;
@@ -133,24 +137,22 @@ struct ModelImportResult {
 Mesh ProcessMesh(const aiMesh *mesh) {
     Mesh m = {};
     m.VertexCount = mesh->mNumVertices;
-    m.Vertices = new Vec3[mesh->mNumVertices]; 
-    m.Normals = new Vec3[mesh->mNumVertices];
-    m.UVs = new Vec2[mesh->mNumVertices];
+    m.Vertices = new Vertex[mesh->mNumVertices]; 
     
     for (usize i = 0; i < mesh->mNumVertices; ++i) {
-        m.Vertices[i][0] = mesh->mVertices[i].x;
-        m.Vertices[i][1] = mesh->mVertices[i].y;
-        m.Vertices[i][2] = mesh->mVertices[i].z;
+        m.Vertices[i].Position[0] = mesh->mVertices[i].x;
+        m.Vertices[i].Position[1] = mesh->mVertices[i].y;
+        m.Vertices[i].Position[2] = mesh->mVertices[i].z;
 
-        m.Normals[i][0] = mesh->mNormals[i].x;
-        m.Normals[i][1] = mesh->mNormals[i].y;
-        m.Normals[i][2] = mesh->mNormals[i].z;
+        m.Vertices[i].Normal[0] = mesh->mNormals[i].x;
+        m.Vertices[i].Normal[1] = mesh->mNormals[i].y;
+        m.Vertices[i].Normal[2] = mesh->mNormals[i].z;
 
         if (mesh->mTextureCoords[0]) {
-            m.UVs[i][0] = mesh->mTextureCoords[0][i].x;
-            m.UVs[i][1] = mesh->mTextureCoords[0][i].y;
+            m.Vertices[i].UV[0] = mesh->mTextureCoords[0][i].x;
+            m.Vertices[i].UV[1] = mesh->mTextureCoords[0][i].y;
         } else {
-            m.UVs[i] = {0.0f, 0.0f};
+            m.Vertices[i].UV = {0.0f, 0.0f};
         }
     }
 
@@ -168,8 +170,7 @@ Mesh ProcessMesh(const aiMesh *mesh) {
         }
     }
 
-    std::cout << "mesh has material " << mesh->mMaterialIndex << std::endl;
-
+    // std::cout << "mesh has material " << mesh->mMaterialIndex << std::endl;
     return m;
 }
 
@@ -204,12 +205,19 @@ ModelImportResult ImportModel(const char *filename) {
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+
 u32 CompileShader(const char *vertex_shader_path, const char *fragment_shader_path) 
-{ 
+{
+
+    s8 vertex_shader_code = ReadFile(vertex_shader_path);
+    s8 fragment_shader_code = ReadFile(frragment_shader_path);
 }
 
-void RenderSimpleScene(Vector<Mesh> meshes) {
+void RenderSimpleScene(const Vector<Mesh> &meshes) {
     glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     GLFWwindow *window = glfwCreateWindow(800, 800, "test", nullptr, nullptr);
 
     glfwMakeContextCurrent(window);
@@ -219,27 +227,22 @@ void RenderSimpleScene(Vector<Mesh> meshes) {
         return;
     }
 
-    Vector<u32> VAOs;
-    Vector<u32> VBOs;
-    Vector<u32> EBOs;
+    Vector<u32> VAOs(meshes.Size(), 0);
+    Vector<u32> VBOs(meshes.Size(), 0);
+    Vector<u32> EBOs(meshes.Size(), 0);
 
-    VAOs.Resize(meshes.Size(), 0);
-    VBOs.Resize(meshes.Size(), 0);
-    EBOs.Resize(meshes.Size(), 0);
+    glGenVertexArrays(meshes.Size(), &VAOs[0]);
+    glGenBuffers(meshes.Size(), &VBOs[0]);
+    glGenBuffers(meshes.Size(), &EBOs[0]);
 
     for (isize i = 0; i < meshes.Size(); ++i) {
-        Mesh &m = meshes[i];
-        glGenVertexArrays(1, &VAOs[i]);
-        glGenBuffers(1, &VBOs[i]);
-        glGenBuffers(1, &EBOs[i]);
-      
+        const Mesh &m = meshes[i];
         glBindVertexArray(VAOs[i]);
         glBindBuffer(GL_ARRAY_BUFFER, VBOs[i]);
-
-        glBufferData(GL_ARRAY_BUFFER, m.VertexCount * (sizeof(Vec3) + sizeof(Vec3) + sizeof(Vec2)), &m, GL_STATIC_DRAW);  
+        glBufferData(GL_ARRAY_BUFFER, m.VertexCount * (sizeof(Vec3) + sizeof(Vec3) + sizeof(Vec2)), m.Vertices, GL_STATIC_DRAW);  
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[i]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, m.IndexCount * sizeof(u32), &m.Indices, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, m.IndexCount * sizeof(u32), m.Indices, GL_STATIC_DRAW);
 
         // vertex positions
         glEnableVertexAttribArray(0);	
@@ -254,14 +257,13 @@ void RenderSimpleScene(Vector<Mesh> meshes) {
         glBindVertexArray(0);
     }
 
-    glViewport(0.0f, 0.0f, 800.0f, 800.0f);
-
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(1.0, 1.0, 1.0, 1.0);
         for (isize i = 0; i < meshes.Size(); ++i) {
-            glBindVertexArray(VAOs[i]):
-            glDrawElements(GL_TRIANGLES, m.IndexCount, GL_UNSIGNED_INT, 0);
-            glBindVertexArray(0):
+            glBindVertexArray(VAOs[i]);
+            glDrawElements(GL_TRIANGLES, meshes[i].IndexCount, GL_UNSIGNED_INT, 0);
+            glBindVertexArray(0);
         }
 
         glfwSwapBuffers(window);

@@ -1,10 +1,13 @@
-if [ -z $1 ]; then
-    cmake -S . -B build/ -D CMAKE_BUILD_TYPE=Debug
-elif [ "$1" = "release" ]; then
-    cmake -S . -B build/ -D CMAKE_BUILD_TYPE=RelWithDebInfo
-else
+set -e
+
+build_type=Debug
+if [ "$1" = "release" ]; then
+    build_type=RelWithDebInfo
+elif [ ! -z $1 ]; then
     echo Invalid argument $1, exiting...
     exit
 fi
 
-cmake --build build --target test && cmake --build build --target run
+cmake -S . -B build/ -D CMAKE_BUILD_TYPE=$build_type
+cmake --build build --target test --config $build_type
+cmake --build build --target run --config $build_type

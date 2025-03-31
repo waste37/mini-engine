@@ -3,6 +3,7 @@
 #include <ostream>
 
 #include <cstdio>
+#include <cassert>
 
 template <typename T>
 class Vector {
@@ -14,6 +15,7 @@ public:
         m_Size = size;
         InitCapacityToPowerOfTwo();
         m_Data = new T[m_Capacity];
+        // PrintInfo("Vector()");
     }
 
     Vector(isize size, T value)
@@ -24,6 +26,7 @@ public:
         for (isize i = 0; i < m_Size; ++i) {
             m_Data[i] = value;
         }
+        // PrintInfo("Vector(isize size, T value)");
     }
 
     Vector(const std::initializer_list<T>& xs)
@@ -35,6 +38,7 @@ public:
         for (const T x : xs) {
             m_Data[i++] = x;
         }
+        // PrintInfo("Vector(const std::initializer_list<T>& xs)");
     }
 
     Vector(const Vector<T>& xs)
@@ -46,11 +50,13 @@ public:
         for (isize i = 0; i < m_Size; ++i) {
             m_Data[i] = xs.m_Data[i];
         }
+        // PrintInfo("Vector(const Vector<T>& xs)");
     }
 
     ~Vector()
     {
         delete[] m_Data;
+        // PrintInfo("~Vector()");
     }
 
     void Push(T x)
@@ -59,6 +65,7 @@ public:
             Grow();
         }
         m_Data[m_Size++] = x;
+        // PrintInfo("void Push(T x)");
     }
 
     T Pop()
@@ -68,6 +75,7 @@ public:
             Shrink();
         }
 
+        // PrintInfo("T Pop()");
         return x;
     }
 
@@ -80,6 +88,7 @@ public:
         }
         delete[] m_Data;
         m_Data = new_data;
+        // PrintInfo("void Reserve(isize size)");
     }
 
     void Resize(isize size)
@@ -91,6 +100,7 @@ public:
         // while (m_Capacity > INITIAL_CAPACITY && m_Size < m_Capacity / 2) {
         //     Shrink();
         // }
+        // PrintInfo("void Resize(isize size)");
     }
 
     void Resize(isize size, T x)
@@ -100,6 +110,7 @@ public:
         while (old_size < m_Size) {
             m_Data[old_size++] = x;
         }
+        // PrintInfo("void Resize(isize size, T x)");
     }
 
     inline bool Empty() const
@@ -110,6 +121,7 @@ public:
     inline void Clear()
     {
         Resize(0);
+        // PrintInfo("void Clear()");
     }
 
     inline isize Size() const
@@ -119,11 +131,13 @@ public:
 
     inline const T& operator[](isize i) const
     {
+        assert(i >= 0);
         return m_Data[i];
     }
 
     inline T& operator[](isize i)
     {
+        assert(i >= 0);
         return m_Data[i];
     }
 
@@ -142,12 +156,15 @@ public:
     isize m_Size;
     isize m_Capacity;
 private:
+    // void PrintInfo(const char *s) const {
+    //     printf("Vector@%p:{size=%ld capacity=%ld}.%s\n", m_Data, m_Size, m_Capacity, s);
+    // }
     inline isize NearestPowerOfTwo(isize n)
     {
         isize result = 1;
         isize i = 0;
         while (result < n) {
-            result = (1 << i++);
+            result = (1ull << i++);
         }
         return result;
     }
