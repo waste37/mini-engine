@@ -25,7 +25,8 @@ endif()
 ###########################################
 
 set(MINI_ENGINE_EXECUTABLE_NAME mini)
-add_executable(${MINI_ENGINE_EXECUTABLE_NAME} src/main.cpp src/WorldRegistry.cpp src/glad/src/glad.c)
+
+add_executable(${MINI_ENGINE_EXECUTABLE_NAME} src/main.cpp src/WorldRegistry.cpp src/Platform.cpp src/glad/src/glad.c)
 
 target_include_directories(${MINI_ENGINE_EXECUTABLE_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/glad/include)
 
